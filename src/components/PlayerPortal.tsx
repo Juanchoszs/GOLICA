@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useTheme } from './ThemeContext';
 import {
     User,
     Trophy,
@@ -17,10 +18,14 @@ import {
     Upload,
     Clock,
     CheckCircle2,
-    Users
+    Users,
+    Sun,
+    Moon,
+    Camera as CameraIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
+import { CameraCapture } from './ui/CameraCapture';
 
 interface PlayerPortalProps {
     user: any;
@@ -31,6 +36,8 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
     const [playerData, setPlayerData] = useState<any>(user);
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [showCamera, setShowCamera] = useState<{ side: 'front' | 'back' } | null>(null);
+    const { theme, toggleTheme } = useTheme();
 
     useEffect(() => {
         const fetchPlayerData = async () => {
@@ -47,15 +54,51 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
         fetchPlayerData();
     }, [user.id]);
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || e.target.files.length === 0) return;
+    const handleFileUpload = async (file: File | Blob, side: 'front' | 'back') => {
+        console.log(`--- Iniciando subida de archivo (${side}) ---`);
+        
+        if (!playerData?.id) {
+            console.error('Error: ID de jugador no encontrado');
+            toast.error('Error interno: No se pudo identificar al jugador');
+            return;
+        }
+
+        const fileName = file instanceof File ? file.name : `capture_${side}.jpg`;
+        const fileExt = fileName.split('.').pop() || 'jpg';
+        const filePath = `${playerData.id}/id_card_${side}.${fileExt}`;
+        const dbColumn = side === 'front' ? 'id_card_front_url' : 'id_card_back_url';
 
         setIsUploading(true);
-        // Nota: Esto simula la subida. En un entorno real se subiría a Supabase Storage
-        setTimeout(() => {
-            toast.success('Documento de identidad subido correctamente');
+        try {
+            console.log(`Subiendo a storage: ${filePath}...`);
+            const { error: uploadError } = await supabase.storage
+                .from('player-documents')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('player-documents')
+                .getPublicUrl(filePath);
+
+            console.log(`Actualizando DB columna ${dbColumn}...`);
+            const { error: updateError } = await supabase
+                .from('players')
+                .update({ [dbColumn]: publicUrl })
+                .eq('id', playerData.id);
+
+            if (updateError) throw updateError;
+
+            setPlayerData({ ...playerData, [dbColumn]: publicUrl });
+            toast.success(`Tarjeta (${side === 'front' ? 'frente' : 'dorso'}) subida correctamente`);
+            setShowCamera(null);
+        } catch (error: any) {
+            console.error('ERROR EN SUBIDA:', error);
+            toast.error(`Error al subir: ${error.message}`);
+        } finally {
             setIsUploading(false);
-        }, 1500);
+            console.log('--- Proceso terminado ---');
+        }
     };
 
     const performance = playerData.performance || { training: 0, matchGoals: 0, matchAssists: 0 };
@@ -74,10 +117,24 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                             <p className="text-muted-foreground text-xs">Hola, {playerData.name}</p>
                         </div>
                     </div>
-                    <Button variant="ghost" onClick={onLogout} className="text-destructive hover:bg-destructive/10">
-                        <LogOut size={18} className="mr-2" />
-                        <span className="hidden sm:inline">Cerrar Sesión</span>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        {/* Theme Toggle Button */}
+                        <button
+                            onClick={toggleTheme}
+                            className="w-10 h-10 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30 flex items-center justify-center transition-all duration-300 hover:scale-110"
+                            aria-label="Cambiar tema"
+                        >
+                            {theme === 'dark' ? (
+                                <Sun className="w-5 h-5 text-primary" />
+                            ) : (
+                                <Moon className="w-5 h-5 text-primary" />
+                            )}
+                        </button>
+                        <Button variant="ghost" onClick={onLogout} className="text-destructive hover:bg-destructive/10">
+                            <LogOut size={18} className="mr-2" />
+                            <span className="hidden sm:inline">Cerrar Sesión</span>
+                        </Button>
+                    </div>
                 </div>
             </header>
 
@@ -110,21 +167,71 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                 <FileText size={18} className="text-primary" />
                                 Mis Documentos
                             </h3>
-                            <p className="text-muted-foreground text-xs mb-4">Sube tu documento de identidad para completar tu ficha técnica.</p>
-                            <div className="space-y-3">
-                                <div className="p-3 bg-muted/50 rounded-lg border border-border flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <Shield size={20} className="text-primary" />
-                                        <span className="text-sm">Documento Identidad</span>
+                            <p className="text-muted-foreground text-xs mb-4 text-pretty subrayado">Sube ambos lados de tu documento de identidad para completar tu ficha técnica.</p>
+                            
+                            <div className="space-y-4">
+                                {/* Front Side */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                                        <span>Frente de Identidad</span>
+                                        {playerData.id_card_front_url && <span className="text-green-500 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</span>}
                                     </div>
-                                    <label className="cursor-pointer">
-                                        <input type="file" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
-                                        <Upload size={18} className={`${isUploading ? 'animate-pulse' : ''} text-muted-foreground hover:text-primary transition-colors`} />
-                                    </label>
+                                    <div className="flex gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            className="flex-1 h-12 border-dashed border-2 hover:border-primary hover:bg-primary/5 group"
+                                            onClick={() => setShowCamera({ side: 'front' })}
+                                            disabled={isUploading}
+                                        >
+                                            <CameraIcon size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
+                                            <span className="text-xs">Tomar Foto</span>
+                                        </Button>
+                                        <label className="flex-1 h-12 border-dashed border-2 rounded-md border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 group">
+                                            <input 
+                                                type="file" 
+                                                className="hidden" 
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'front');
+                                                }}
+                                                disabled={isUploading} 
+                                            />
+                                            <Upload size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
+                                            <span className="text-xs font-medium text-muted-foreground group-hover:text-primary">Elegir Archivo</span>
+                                        </label>
+                                    </div>
                                 </div>
-                                <div className="text-xs text-primary flex items-center gap-1 mt-2">
-                                    <CheckCircle2 size={12} />
-                                    Tu seguro médico está vigente
+
+                                {/* Back Side */}
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                                        <span>Dorso de Identidad</span>
+                                        {playerData.id_card_back_url && <span className="text-green-500 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</span>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button 
+                                            variant="outline" 
+                                            className="flex-1 h-12 border-dashed border-2 hover:border-primary hover:bg-primary/5 group"
+                                            onClick={() => setShowCamera({ side: 'back' })}
+                                            disabled={isUploading}
+                                        >
+                                            <CameraIcon size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
+                                            <span className="text-xs">Tomar Foto</span>
+                                        </Button>
+                                        <label className="flex-1 h-12 border-dashed border-2 rounded-md border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 group">
+                                            <input 
+                                                type="file" 
+                                                className="hidden" 
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'back');
+                                                }}
+                                                disabled={isUploading} 
+                                            />
+                                            <Upload size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
+                                            <span className="text-xs font-medium text-muted-foreground group-hover:text-primary">Elegir Archivo</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </Card>
@@ -245,6 +352,15 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                     </div>
                 </div>
             </main>
+
+            {/* Camera Modal */}
+            {showCamera && (
+                <CameraCapture 
+                    title={`Capturar ${showCamera.side === 'front' ? 'Frente' : 'Dorso'} de Identificación`}
+                    onCapture={(blob) => handleFileUpload(blob, showCamera.side)}
+                    onClose={() => setShowCamera(null)}
+                />
+            )}
         </div>
     );
 }

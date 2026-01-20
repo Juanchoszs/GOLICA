@@ -52,9 +52,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         toast.error('Credenciales incorrectas');
       } else if (onLogin) {
         toast.success('¡Inicio de sesión exitoso! Bienvenido al panel de administración.');
+        const { password: _, ...adminSafedata } = admin;
         onLogin({
-          identification: admin.identification,
-          name: admin.name,
+          ...adminSafedata,
           role: 'admin'
         });
       }
@@ -211,8 +211,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         toast.error('Credenciales incorrectas');
                       } else if (onLogin) {
                         toast.success(`¡Bienvenido de nuevo, ${player.name}!`);
+                        const { password: _, ...playerSafedata } = player;
                         onLogin({
-                          ...player,
+                          ...playerSafedata,
                           role: 'player'
                         });
                       }

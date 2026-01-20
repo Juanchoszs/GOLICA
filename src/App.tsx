@@ -12,12 +12,26 @@ import { PlayerPortal } from './components/PlayerPortal';
 import { Toaster } from './components/ui/sonner';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('inicio');
-  const [user, setUser] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    return localStorage.getItem('golica_page') || 'inicio';
+  });
+  const [user, setUser] = useState<any>(() => {
+    const savedUser = localStorage.getItem('golica_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    localStorage.setItem('golica_page', currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('golica_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('golica_user');
+    }
+  }, [user]);
 
   const handleLogin = (userData: any) => {
     setUser(userData);
@@ -26,6 +40,7 @@ export default function App() {
 
   const handleLogout = () => {
     setUser(null);
+    localStorage.removeItem('golica_user');
     setCurrentPage('inicio');
   };
 
