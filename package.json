@@ -1,5 +1,5 @@
 {
-      "name": "Club de Fútbol Website Design",
+      "name": "Golica",
       "version": "0.1.0",
       "private": true,
       "dependencies": {
@@ -38,9 +38,9 @@
             "input-otp": "^1.4.2",
             "lucide-react": "^0.487.0",
             "next-themes": "^0.4.6",
-            "react": "^18.3.1",
-            "react-day-picker": "^8.10.1",
-            "react-dom": "^18.3.1",
+            "react": "^19.0.0",
+            "react-day-picker": "^9.13.0",
+            "react-dom": "^19.0.0",
             "react-hook-form": "^7.55.0",
             "react-resizable-panels": "^2.1.7",
             "recharts": "^2.15.2",
@@ -50,10 +50,19 @@
       },
       "devDependencies": {
             "@types/node": "^20.10.0",
-            "@types/react": "^19.2.8",
-            "@vitejs/plugin-react-swc": "^3.10.2",
+            "@types/react": "^19.0.0",
+            "@types/react-dom": "^19.0.0",
+            "@vitejs/plugin-react-swc": "^3.11.0",
             "vercel": "^50.4.6",
-            "vite": "6.3.5"
+            "vite": "^6.4.1"
+      },
+      "overrides": {
+            "undici": "^6.22.1",
+            "path-to-regexp": "^6.3.0",
+            "semver": "^7.5.4",
+            "tar": "^7.5.3",
+            "esbuild": "^0.25.0",
+            "@babel/runtime": "^7.26.10"
       },
       "scripts": {
             "dev": "vite",
