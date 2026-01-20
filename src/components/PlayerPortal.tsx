@@ -63,13 +63,32 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
             return;
         }
 
-        const fileName = file instanceof File ? file.name : `capture_${side}.jpg`;
-        const fileExt = fileName.split('.').pop() || 'jpg';
-        const filePath = `${playerData.id}/id_card_${side}.${fileExt}`;
         const dbColumn = side === 'front' ? 'id_card_front_url' : 'id_card_back_url';
+        const oldUrl = playerData[dbColumn];
 
         setIsUploading(true);
         try {
+            // 1. Delete old image if it exists
+            if (oldUrl && oldUrl.includes('player-documents')) {
+                try {
+                    const pathParts = oldUrl.split('player-documents/')[1];
+                    if (pathParts) {
+                        const oldFilePath = pathParts.split('?')[0];
+                        await supabase.storage
+                            .from('player-documents')
+                            .remove([oldFilePath]);
+                        console.log(`Imagen antigua eliminada: ${oldFilePath}`);
+                    }
+                } catch (delError) {
+                    console.error('Error al eliminar imagen antigua:', delError);
+                }
+            }
+
+            // 2. Upload new image
+            const fileName = file instanceof File ? file.name : `capture_${side}.jpg`;
+            const fileExt = fileName.split('.').pop() || 'jpg';
+            const filePath = `${playerData.id}/id_card_${side}_${Date.now()}.${fileExt}`;
+
             console.log(`Subiendo a storage: ${filePath}...`);
             const { error: uploadError } = await supabase.storage
                 .from('player-documents')

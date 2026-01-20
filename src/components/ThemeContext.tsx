@@ -14,12 +14,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.remove('light', 'dark');
-      if (savedTheme === 'light') {
-        document.documentElement.classList.add('light');
-      }
+    const systemTheme: Theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const initialTheme = savedTheme || systemTheme;
+    
+    setTheme(initialTheme);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(initialTheme);
+    
+    // Only persist if the user explicitly changed it or we want to stick to the system one
+    if (!savedTheme) {
+      localStorage.setItem('theme', initialTheme);
     }
   }, []);
 
@@ -28,9 +32,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.remove('light', 'dark');
-    if (newTheme === 'light') {
-      document.documentElement.classList.add('light');
-    }
+    document.documentElement.classList.add(newTheme);
   };
 
   return (

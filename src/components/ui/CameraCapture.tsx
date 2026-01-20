@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './button';
-import { Camera, RefreshCw, Check, X, RotateCcw } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageEditor } from './ImageEditor';
 
 interface CameraCaptureProps {
     onCapture: (blob: Blob) => void;
@@ -12,7 +13,7 @@ interface CameraCaptureProps {
 export function CameraCapture({ onCapture, onClose, title }: CameraCaptureProps) {
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
-    const [rotation, setRotation] = useState(0);
+    const [showEditor, setShowEditor] = useState(false);
     const [isCameraReady, setIsCameraReady] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -54,8 +55,9 @@ export function CameraCapture({ onCapture, onClose, title }: CameraCaptureProps)
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
             setCapturedImage(dataUrl);
+            setShowEditor(true);
             
             // Stop camera stream after capture
             if (stream) {
@@ -65,46 +67,26 @@ export function CameraCapture({ onCapture, onClose, title }: CameraCaptureProps)
         }
     };
 
-    const handleRotate = () => {
-        setRotation((prev) => (prev + 90) % 360);
+    const handleSaveCropped = (blob: Blob) => {
+        onCapture(blob);
     };
 
-    const confirmCapture = async () => {
-        if (!capturedImage || !canvasRef.current) return;
-
-        const img = new Image();
-        img.src = capturedImage;
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-
-            // Adjust canvas size based on rotation
-            if (rotation % 180 === 90) {
-                canvas.width = img.height;
-                canvas.height = img.width;
-            } else {
-                canvas.width = img.width;
-                canvas.height = img.height;
-            }
-
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate((rotation * Math.PI) / 180);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
-            canvas.toBlob((blob) => {
-                if (blob) {
-                    onCapture(blob);
-                }
-            }, 'image/jpeg', 0.8);
-        };
-    };
-
-    const retake = () => {
+    const handleCancelEditor = () => {
+        setShowEditor(false);
         setCapturedImage(null);
-        setRotation(0);
         startCamera();
     };
+
+    if (showEditor && capturedImage) {
+        return (
+            <ImageEditor 
+                image={capturedImage} 
+                onSave={handleSaveCropped} 
+                onCancel={handleCancelEditor}
+                aspect={1.6 / 1}
+            />
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4">
@@ -120,91 +102,48 @@ export function CameraCapture({ onCapture, onClose, title }: CameraCaptureProps)
 
                 {/* Viewport */}
                 <div className="relative aspect-[4/3] bg-black flex items-center justify-center">
-                    {!capturedImage ? (
-                        <>
-                            <video 
-                                ref={videoRef} 
-                                autoPlay 
-                                playsInline 
-                                className="w-full h-full object-cover"
-                            />
-                            {/* Framing Guide Overlay */}
-                            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                <div className="w-[85%] aspect-[1.6/1] border-2 border-primary/60 rounded-xl relative">
-                                    <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
-                                    <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
-                                    <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
-                                    <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
-                                    <div className="absolute inset-0 bg-primary/5 flex items-center justify-center">
-                                        <p className="text-white/40 text-xs font-bold uppercase tracking-widest text-center px-4">
-                                            Alinea tu tarjeta aquí
-                                        </p>
-                                    </div>
-                                </div>
+                    <video 
+                        ref={videoRef} 
+                        autoPlay 
+                        playsInline 
+                        className="w-full h-full object-cover"
+                    />
+                    {/* Framing Guide Overlay */}
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div className="w-[85%] aspect-[1.6/1] border-2 border-primary/60 rounded-xl relative">
+                            <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                            <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                            <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                            <div className="absolute inset-0 bg-primary/5 flex items-center justify-center">
+                                <p className="text-white/40 text-xs font-bold uppercase tracking-widest text-center px-4">
+                                    Alinea tu tarjeta aquí
+                                </p>
                             </div>
-                        </>
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-zinc-950 overflow-hidden">
-                            <img 
-                                src={capturedImage} 
-                                alt="Capture preview" 
-                                className="max-w-full max-h-full transition-transform duration-300 shadow-xl"
-                                style={{ transform: `rotate(${rotation}deg)` }}
-                            />
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* Controls */}
                 <div className="p-6 flex items-center justify-around bg-zinc-900">
-                    {!capturedImage ? (
-                        <button 
-                            onClick={capturePhoto} 
-                            disabled={!isCameraReady}
-                            className="w-16 h-16 bg-white rounded-full border-4 border-white/20 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
-                        >
-                            <div className="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center">
-                                <Camera className="text-white" size={24} />
-                            </div>
-                        </button>
-                    ) : (
-                        <div className="flex items-center gap-8">
-                            <Button 
-                                variant="outline" 
-                                size="icon" 
-                                onClick={retake}
-                                className="w-12 h-12 rounded-full border-white/20 text-white hover:bg-white/10"
-                            >
-                                <RefreshCw size={20} />
-                            </Button>
-                            
-                            <Button 
-                                variant="outline" 
-                                size="icon" 
-                                onClick={handleRotate}
-                                className="w-12 h-12 rounded-full border-white/20 text-white hover:bg-white/10"
-                            >
-                                <RotateCcw size={20} />
-                            </Button>
-
-                            <Button 
-                                onClick={confirmCapture}
-                                className="w-16 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center active:scale-95 transition-all shadow-lg"
-                            >
-                                <Check size={32} />
-                            </Button>
+                    <button 
+                        onClick={capturePhoto} 
+                        disabled={!isCameraReady}
+                        className="w-16 h-16 bg-white rounded-full border-4 border-white/20 flex items-center justify-center active:scale-90 transition-transform disabled:opacity-50"
+                    >
+                        <div className="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center">
+                            <Camera className="text-white" size={24} />
                         </div>
-                    )}
+                    </button>
                 </div>
 
                 <canvas ref={canvasRef} className="hidden" />
             </div>
             
             <p className="mt-4 text-white/60 text-sm text-center max-w-xs">
-                {!capturedImage 
-                    ? "Ubica la tarjeta de frente a la cámara dentro del recuadro." 
-                    : "Si la imagen no está derecha, usa el botón de rotar."}
+                Ubica la tarjeta de frente a la cámara dentro del recuadro. Luego podrás rotarla y recortarla.
             </p>
         </div>
     );
 }
+

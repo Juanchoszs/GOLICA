@@ -5,9 +5,10 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Card } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ArrowLeft, Save, Shield, Activity, Heart, Trophy } from 'lucide-react';
+import { ArrowLeft, Save, Shield, Activity, Heart, Trophy, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
+import { ImageEditor } from '../ui/ImageEditor';
 
 interface PlayerDetailsProps {
   player: any;
@@ -29,6 +30,9 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
     tests: player.tests || [],
   });
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Image editing state
+  const [editingImage, setEditingImage] = useState<{ url: string, field: string } | null>(null);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -52,6 +56,10 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
         updateData.birth_date = editedPlayer.birth_date || editedPlayer.birthDate;
       }
 
+      // Include updated image URLs
+      if (editedPlayer.id_card_front_url) updateData.id_card_front_url = editedPlayer.id_card_front_url;
+      if (editedPlayer.id_card_back_url) updateData.id_card_back_url = editedPlayer.id_card_back_url;
+
       const { data, error } = await supabase
         .from('players')
         .update(updateData)
@@ -68,6 +76,57 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
       toast.error('Error al actualizar la información');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUpdateImage = async (blob: Blob) => {
+    if (!editingImage) return;
+
+    const toastId = toast.loading('Subiendo imagen editada...');
+    try {
+      // 1. Delete old image if it exists
+      const oldUrl = editedPlayer[editingImage.field];
+      if (oldUrl && oldUrl.includes('player-documents')) {
+        try {
+          // Extract path from public URL
+          const pathParts = oldUrl.split('player-documents/')[1];
+          if (pathParts) {
+            const filePath = pathParts.split('?')[0]; // Remove any query params
+            await supabase.storage
+              .from('player-documents')
+              .remove([filePath]);
+          }
+        } catch (delError) {
+          console.error('Error deleting old image:', delError);
+          // Continue with upload even if deletion fails (non-critical)
+        }
+      }
+
+      // 2. Upload new image
+      const fileName = `${player.id}/${editingImage.field}_${Date.now()}.jpg`;
+      const { data, error } = await supabase.storage
+        .from('player-documents')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('player-documents')
+        .getPublicUrl(fileName);
+
+      setEditedPlayer({
+        ...editedPlayer,
+        [editingImage.field]: publicUrl
+      });
+      
+      setEditingImage(null);
+      toast.success('Imagen actualizada localmente. No olvides guardar los cambios del perfil.', { id: toastId });
+    } catch (error) {
+      console.error('Error uploading edited image:', error);
+      toast.error('Error al subir la imagen editada', { id: toastId });
     }
   };
 
@@ -93,6 +152,17 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
     }
     return `${age} años`;
   };
+
+  if (editingImage) {
+    return (
+      <ImageEditor 
+        image={editingImage.url}
+        onSave={handleUpdateImage}
+        onCancel={() => setEditingImage(null)}
+        aspect={1.6 / 1}
+      />
+    );
+  }
 
   return (
     <div className="p-4 md:p-8">
@@ -456,11 +526,23 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lado Frontal</p>
-                      {editedPlayer.id_card_front_url && (
-                        <a href={editedPlayer.id_card_front_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs">Ver original</a>
-                      )}
+                      <div className="flex gap-2">
+                        {editedPlayer.id_card_front_url && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10"
+                              onClick={() => setEditingImage({ url: editedPlayer.id_card_front_url, field: 'id_card_front_url' })}
+                            >
+                              <Scissors size={12} className="mr-1" /> Editar/Rotar
+                            </Button>
+                            <a href={editedPlayer.id_card_front_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center">Ver original</a>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center">
+                    <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
                       {editedPlayer.id_card_front_url ? (
                         <img 
                           src={editedPlayer.id_card_front_url} 
@@ -477,11 +559,23 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lado Posterior (Dorso)</p>
-                      {editedPlayer.id_card_back_url && (
-                        <a href={editedPlayer.id_card_back_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs">Ver original</a>
-                      )}
+                      <div className="flex gap-2">
+                        {editedPlayer.id_card_back_url && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10"
+                              onClick={() => setEditingImage({ url: editedPlayer.id_card_back_url, field: 'id_card_back_url' })}
+                            >
+                              <Scissors size={12} className="mr-1" /> Editar/Rotar
+                            </Button>
+                            <a href={editedPlayer.id_card_back_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center">Ver original</a>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center">
+                    <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
                       {editedPlayer.id_card_back_url ? (
                         <img 
                           src={editedPlayer.id_card_back_url} 
@@ -495,11 +589,21 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
                   </div>
                 </div>
 
-                {/* Legacy View (if only id_card_url exists) */}
+                {/* Legacy View */}
                 {editedPlayer.id_card_url && !editedPlayer.id_card_front_url && (
                   <div className="pt-8 border-t border-border space-y-4">
-                    <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Archivo Antiguo (Legacy)</p>
-                    <div className="relative group overflow-hidden rounded-xl border border-border bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Archivo Antiguo (Legacy)</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10"
+                        onClick={() => setEditingImage({ url: editedPlayer.id_card_url, field: 'id_card_url' })}
+                      >
+                        <Scissors size={12} className="mr-1" /> Editar/Rotar
+                      </Button>
+                    </div>
+                    <div className="relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
                       <img 
                         src={editedPlayer.id_card_url} 
                         alt="ID Legacy" 
