@@ -100,13 +100,17 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
             theme === 'dark' 
                 ? 'bg-black' 
                 : 'bg-white'
-        }`}>
+        }`} style={theme === 'light' ? { backgroundColor: '#FFFFFF' } : {}}>
             {theme === 'light' && (
                 <style>{`
                     .react-easy-crop_image {
                         background-color: white !important;
                     }
                     .react-easy-crop_container {
+                        background-color: white !important;
+                    }
+                    /* Asegurar que todo sea opaco en tema claro */
+                    div[class*="fixed"] {
                         background-color: white !important;
                     }
                 `}</style>
@@ -161,11 +165,11 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
                 />
             </div>
 
-            <div className={`mt-6 backdrop-blur-xl p-6 rounded-3xl border shadow-xl ${
+            <div className={`mt-6 p-6 rounded-3xl border shadow-xl ${
                 theme === 'dark'
-                    ? 'bg-zinc-900/50 border-white/5'
-                    : 'bg-foreground/5 border-border'
-            }`}>
+                    ? 'bg-zinc-900/50 border-white/5 backdrop-blur-xl'
+                    : 'bg-white border-border'
+            }`} style={theme === 'light' ? { backgroundColor: '#FFFFFF' } : {}}>
                 <div className="space-y-6">
                     {/* Zoom Control */}
                     <div className="space-y-3">
