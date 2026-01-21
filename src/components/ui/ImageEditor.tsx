@@ -3,6 +3,7 @@ import Cropper, { Area, Point } from 'react-easy-crop';
 import { Button } from './button';
 import { Slider } from './slider';
 import { RotateCcw, Check, X, Scissors } from 'lucide-react';
+import { useTheme } from '../ThemeContext';
 
 interface ImageEditorProps {
     image: string;
@@ -12,6 +13,7 @@ interface ImageEditorProps {
 }
 
 export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: ImageEditorProps) {
+    const { theme } = useTheme();
     const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
     const [rotation, setRotation] = useState(0);
@@ -94,28 +96,58 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
     };
 
     return (
-        <div className="fixed inset-0 z-[110] bg-black flex flex-col p-4 sm:p-6 animate-in fade-in duration-300">
+        <div className={`fixed inset-0 z-[110] flex flex-col p-4 sm:p-6 animate-in fade-in duration-300 ${
+            theme === 'dark' 
+                ? 'bg-black' 
+                : 'bg-white'
+        }`}>
+            {theme === 'light' && (
+                <style>{`
+                    .react-easy-crop_image {
+                        background-color: white !important;
+                    }
+                    .react-easy-crop_container {
+                        background-color: white !important;
+                    }
+                `}</style>
+            )}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        theme === 'dark'
+                            ? 'bg-primary/20'
+                            : 'bg-primary/10'
+                    }`}>
                         <Scissors className="text-primary w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-white font-bold">Editar Imagen</h3>
-                        <p className="text-zinc-400 text-xs">Rota y recorta para ajustar</p>
+                        <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-foreground'}`}>
+                            Editar Imagen
+                        </h3>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-zinc-400' : 'text-muted-foreground'}`}>
+                            Rota y recorta para ajustar
+                        </p>
                     </div>
                 </div>
                 <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={onCancel}
-                    className="text-white/60 hover:text-white hover:bg-white/10 rounded-full"
+                    className={`rounded-full ${
+                        theme === 'dark'
+                            ? 'text-white/60 hover:text-white hover:bg-white/10'
+                            : 'text-foreground/60 hover:text-foreground hover:bg-foreground/5'
+                    }`}
                 >
                     <X size={24} />
                 </Button>
             </div>
 
-            <div className="relative flex-1 bg-zinc-950 rounded-2xl overflow-hidden shadow-2xl border border-white/5">
+            <div className={`relative flex-1 rounded-2xl overflow-hidden shadow-2xl border ${
+                theme === 'dark'
+                    ? 'bg-zinc-950 border-white/5'
+                    : 'bg-white border-border'
+            }`}>
                 <Cropper
                     image={image}
                     crop={crop}
@@ -129,11 +161,17 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
                 />
             </div>
 
-            <div className="mt-6 bg-zinc-900/50 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-xl">
+            <div className={`mt-6 backdrop-blur-xl p-6 rounded-3xl border shadow-xl ${
+                theme === 'dark'
+                    ? 'bg-zinc-900/50 border-white/5'
+                    : 'bg-foreground/5 border-border'
+            }`}>
                 <div className="space-y-6">
                     {/* Zoom Control */}
                     <div className="space-y-3">
-                        <div className="flex justify-between text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                        <div className={`flex justify-between text-xs font-medium uppercase tracking-wider ${
+                            theme === 'dark' ? 'text-zinc-400' : 'text-muted-foreground'
+                        }`}>
                             <span>Zoom</span>
                             <span className="text-primary">{Math.round(zoom * 100)}%</span>
                         </div>
@@ -149,7 +187,9 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
 
                     {/* Rotation Control */}
                     <div className="space-y-3">
-                        <div className="flex justify-between text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                        <div className={`flex justify-between text-xs font-medium uppercase tracking-wider ${
+                            theme === 'dark' ? 'text-zinc-400' : 'text-muted-foreground'
+                        }`}>
                             <span>Rotación</span>
                             <span className="text-primary">{rotation}°</span>
                         </div>
@@ -166,10 +206,14 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
                     <div className="flex gap-4 pt-2">
                         <Button 
                             variant="outline" 
-                            className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10 h-14 rounded-2xl font-semibold"
+                            className={`flex-1 h-14 rounded-2xl font-semibold ${
+                                theme === 'dark'
+                                    ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                    : 'bg-foreground/5 border-border text-foreground hover:bg-foreground/10'
+                            }`}
                             onClick={() => setRotation((prev) => (prev + 90) % 360)}
                         >
-                            <RotateCcw className="mr-2 w-5 h-5" /> Rotal 90°
+                            <RotateCcw className="mr-2 w-5 h-5" /> Rotar 90°
                         </Button>
                         <Button 
                             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20"
@@ -181,7 +225,11 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
                 </div>
             </div>
             
-            <p className="mt-4 text-center text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-medium">
+            <p className={`mt-4 text-center text-[10px] uppercase tracking-[0.2em] font-medium ${
+                theme === 'dark'
+                    ? 'text-zinc-500'
+                    : 'text-muted-foreground'
+            }`}>
                 GOLICA Pro Image Editor
             </p>
         </div>

@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Card } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ArrowLeft, Save, Shield, Activity, Heart, Trophy, Scissors } from 'lucide-react';
+import { ArrowLeft, Save, Shield, Activity, Heart, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 import { ImageEditor } from '../ui/ImageEditor';
+import { PersonalInfoTab } from './tabs/PersonalInfoTab';
+import { PerformanceTab } from './tabs/PerformanceTab';
+import { HealthTab } from './tabs/HealthTab';
+import { TestsTab } from './tabs/TestsTab';
+import { DocumentsTab } from './tabs/DocumentsTab';
 
 interface PlayerDetailsProps {
   player: any;
@@ -141,18 +143,6 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
     });
   };
 
-  const calculateAge = (birthDate: string) => {
-    if (!birthDate) return 'N/A';
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return `${age} años`;
-  };
-
   if (editingImage) {
     return (
       <ImageEditor 
@@ -228,421 +218,39 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
 
         {/* Información General */}
         <TabsContent value="info">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-card border-border p-6">
-              <h3 className="text-foreground text-xl font-semibold mb-4">Datos Personales</h3>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-foreground">Nombre Completo</Label>
-                  <Input
-                    value={editedPlayer.name}
-                    onChange={(e) => setEditedPlayer({ ...editedPlayer, name: e.target.value })}
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-                <div>
-                  <Label className="text-foreground">Email</Label>
-                  <Input
-                    type="email"
-                    value={editedPlayer.email}
-                    onChange={(e) => setEditedPlayer({ ...editedPlayer, email: e.target.value })}
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-                <div>
-                  <Label className="text-foreground">Teléfono</Label>
-                  <Input
-                    value={editedPlayer.phone}
-                    onChange={(e) => setEditedPlayer({ ...editedPlayer, phone: e.target.value })}
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-foreground">Fecha de Nacimiento</Label>
-                    <Input
-                      type="date"
-                      value={editedPlayer.birth_date || ''}
-                      onChange={(e) => setEditedPlayer({ ...editedPlayer, birth_date: e.target.value })}
-                      className="bg-input-background border-border text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-foreground">Edad</Label>
-                    <Input
-                      value={calculateAge(editedPlayer.birth_date)}
-                      disabled
-                      className="bg-muted border-border text-muted-foreground"
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="bg-card border-border p-6">
-              <h3 className="text-foreground text-xl font-semibold mb-4">Datos Deportivos</h3>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-foreground">Categorías</Label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23', 'Profesional'].map(cat => (
-                      <label key={cat} className="flex items-center gap-2 p-2 border border-border rounded-md hover:bg-muted/50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="rounded border-border text-primary"
-                          checked={editedPlayer.category?.includes(cat) || false}
-                          onChange={(e) => {
-                            const currentCats = editedPlayer.category ? editedPlayer.category.split(', ') : [];
-                            const newCats = e.target.checked
-                              ? [...currentCats, cat].join(', ')
-                              : currentCats.filter((c: string) => c !== cat).join(', ');
-                            setEditedPlayer({ ...editedPlayer, category: newCats });
-                          }}
-                        />
-                        <span className="text-sm">{cat}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-foreground">Posición</Label>
-                  <Input
-                    value={editedPlayer.position}
-                    onChange={(e) => setEditedPlayer({ ...editedPlayer, position: e.target.value })}
-                    placeholder="Ej: Delantero, Mediocampista, Defensa..."
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-                <div>
-                  <Label className="text-foreground">Estado</Label>
-                  <select
-                    value={editedPlayer.status}
-                    onChange={(e) => setEditedPlayer({ ...editedPlayer, status: e.target.value })}
-                    className="w-full px-3 py-2 rounded-md bg-input-background border border-border text-foreground"
-                  >
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                    <option value="injured">Lesionado</option>
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-foreground">Descripción del Jugador</Label>
-                  <Textarea
-                    value={editedPlayer.description}
-                    onChange={(e) => setEditedPlayer({ ...editedPlayer, description: e.target.value })}
-                    placeholder="Descripción, características del jugador, fortalezas..."
-                    rows={4}
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-              </div>
-            </Card>
-          </div>
+          <PersonalInfoTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} />
         </TabsContent>
 
         {/* Rendimiento */}
         <TabsContent value="performance">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-card border-border p-6">
-              <h3 className="text-foreground text-xl font-semibold mb-4 flex items-center gap-2">
-                <Activity className="text-primary" size={24} />
-                Rendimiento en Entrenamientos
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-foreground">Nivel de Rendimiento (%)</Label>
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={editedPlayer.performance.training}
-                      onChange={(e) =>
-                        setEditedPlayer({
-                          ...editedPlayer,
-                          performance: {
-                            ...editedPlayer.performance,
-                            training: parseInt(e.target.value),
-                          },
-                        })
-                      }
-                      className="flex-1"
-                    />
-                    <span className="text-foreground font-bold text-2xl w-16 text-right">
-                      {editedPlayer.performance.training}%
-                    </span>
-                  </div>
-                  <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{ width: `${editedPlayer.performance.training}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="bg-card border-border p-6">
-              <h3 className="text-foreground text-xl font-semibold mb-4 flex items-center gap-2">
-                <Trophy className="text-primary" size={24} />
-                Estadísticas en Partidos
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-foreground">Goles (G)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={editedPlayer.performance.matchGoals}
-                    onChange={(e) =>
-                      setEditedPlayer({
-                        ...editedPlayer,
-                        performance: {
-                          ...editedPlayer.performance,
-                          matchGoals: parseInt(e.target.value) || 0,
-                        },
-                      })
-                    }
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-                <div>
-                  <Label className="text-foreground">Asistencias (A)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={editedPlayer.performance.matchAssists}
-                    onChange={(e) =>
-                      setEditedPlayer({
-                        ...editedPlayer,
-                        performance: {
-                          ...editedPlayer.performance,
-                          matchAssists: parseInt(e.target.value) || 0,
-                        },
-                      })
-                    }
-                    className="bg-input-background border-border text-foreground"
-                  />
-                </div>
-                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mt-4">
-                  <p className="text-muted-foreground text-sm mb-2">Resumen de Estadísticas</p>
-                  <p className="text-foreground text-3xl font-bold">
-                    {editedPlayer.performance.matchGoals}G / {editedPlayer.performance.matchAssists}A
-                  </p>
-                  <p className="text-muted-foreground text-sm mt-1">
-                    Total de contribuciones:{' '}
-                    {(editedPlayer.performance.matchGoals || 0) + (editedPlayer.performance.matchAssists || 0)}
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <PerformanceTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} />
         </TabsContent>
 
         {/* Fisioterapia */}
         <TabsContent value="health">
-          <Card className="bg-card border-border p-6">
-            <h3 className="text-foreground text-xl font-semibold mb-4 flex items-center gap-2">
-              <Heart className="text-red-500" size={24} />
-              Antecedentes y Lesiones
-            </h3>
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
-              <p className="text-sm text-muted-foreground">
-                <strong>Nota:</strong> Esta sección será editada desde el módulo de Fisioterapia. Aquí solo se visualiza la información.
-              </p>
-            </div>
-            {editedPlayer.injuries && editedPlayer.injuries.length > 0 ? (
-              <div className="space-y-4">
-                {editedPlayer.injuries.map((injury: any, index: number) => (
-                  <div key={index} className="bg-muted/30 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-foreground font-semibold">{injury.type}</h4>
-                      <span className="text-xs text-muted-foreground">{formatDate(injury.date)}</span>
-                    </div>
-                    <p className="text-muted-foreground text-sm">{injury.description}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Heart className="mx-auto text-muted-foreground mb-2" size={48} />
-                <p className="text-muted-foreground">No hay antecedentes de lesiones registrados</p>
-              </div>
-            )}
-          </Card>
+          <HealthTab editedPlayer={editedPlayer} />
         </TabsContent>
 
         {/* Tests */}
         <TabsContent value="tests">
-          <Card className="bg-card border-border p-6">
-            <h3 className="text-foreground text-xl font-semibold mb-4 flex items-center gap-2">
-              <Trophy className="text-primary" size={24} />
-              Tests y Evaluaciones
-            </h3>
-            {editedPlayer.tests && editedPlayer.tests.length > 0 ? (
-              <div className="space-y-4">
-                {editedPlayer.tests.map((test: any, index: number) => (
-                  <div key={index} className="bg-muted/30 rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-foreground font-semibold">{test.name}</h4>
-                      <span className="text-xs text-muted-foreground">{formatDate(test.date)}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-muted-foreground text-xs">Resultado</p>
-                        <p className="text-foreground font-medium">{test.result}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-xs">Evaluador</p>
-                        <p className="text-foreground font-medium">{test.evaluator || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Trophy className="mx-auto text-muted-foreground mb-2" size={48} />
-                <p className="text-muted-foreground">No hay tests registrados</p>
-              </div>
-            )}
-          </Card>
+          <TestsTab editedPlayer={editedPlayer} />
         </TabsContent>
 
         {/* Documentos */}
         <TabsContent value="documents" className="mt-6">
-          <Card className="bg-card border-border p-8 min-h-[400px]">
-            {editedPlayer.id_card_front_url || editedPlayer.id_card_back_url ? (
-              <div className="space-y-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <Shield size={20} className="text-primary" />
-                    Documentación de Identidad
-                  </h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Front Side */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lado Frontal</p>
-                      <div className="flex gap-2">
-                        {editedPlayer.id_card_front_url && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10"
-                              onClick={() => setEditingImage({ url: editedPlayer.id_card_front_url, field: 'id_card_front_url' })}
-                            >
-                              <Scissors size={12} className="mr-1" /> Editar/Rotar
-                            </Button>
-                            <a href={editedPlayer.id_card_front_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center">Ver original</a>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
-                      {editedPlayer.id_card_front_url ? (
-                        <img 
-                          src={editedPlayer.id_card_front_url} 
-                          alt="ID Front" 
-                          className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <p className="text-muted-foreground text-xs italic">No cargado</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Back Side */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lado Posterior (Dorso)</p>
-                      <div className="flex gap-2">
-                        {editedPlayer.id_card_back_url && (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10"
-                              onClick={() => setEditingImage({ url: editedPlayer.id_card_back_url, field: 'id_card_back_url' })}
-                            >
-                              <Scissors size={12} className="mr-1" /> Editar/Rotar
-                            </Button>
-                            <a href={editedPlayer.id_card_back_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center">Ver original</a>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
-                      {editedPlayer.id_card_back_url ? (
-                        <img 
-                          src={editedPlayer.id_card_back_url} 
-                          alt="ID Back" 
-                          className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <p className="text-muted-foreground text-xs italic">No cargado</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Legacy View */}
-                {editedPlayer.id_card_url && !editedPlayer.id_card_front_url && (
-                  <div className="pt-8 border-t border-border space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Archivo Antiguo (Legacy)</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-7 text-xs px-2 border-primary/30 text-primary hover:bg-primary/10"
-                        onClick={() => setEditingImage({ url: editedPlayer.id_card_url, field: 'id_card_url' })}
-                      >
-                        <Scissors size={12} className="mr-1" /> Editar/Rotar
-                      </Button>
-                    </div>
-                    <div className="relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
-                      <img 
-                        src={editedPlayer.id_card_url} 
-                        alt="ID Legacy" 
-                        className="max-h-[300px] mx-auto object-contain transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                <Shield size={48} className="text-primary mx-auto mb-4 opacity-30" />
-                <h3 className="text-lg font-bold mb-2 text-foreground">Gestión de Documentos</h3>
-                <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                  El jugador aún no ha cargado los archivos de su tarjeta de identidad.
-                </p>
-              </div>
-            )}
-          </Card>
+          <DocumentsTab editedPlayer={editedPlayer} player={player} setEditingImage={setEditingImage} />
         </TabsContent>
       </Tabs>
 
       {/* Bottom Actions */}
-      <div className="flex justify-between mt-8">
+      <div className="flex justify-start mt-8">
         <Button
           variant="outline"
           onClick={onBack}
           className="border-border text-foreground hover:bg-muted"
         >
           <ArrowLeft size={20} className="mr-2" />
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
-          <Save size={20} className="mr-2" />
-          {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+          Volver a la lista
         </Button>
       </div>
     </div>
