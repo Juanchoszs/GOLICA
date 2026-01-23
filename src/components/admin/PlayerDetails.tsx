@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { ArrowLeft, Save, Shield, Activity, Heart, Trophy } from 'lucide-react';
+import { ArrowLeft, Save, Shield, Activity, Heart, Trophy, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 import { ImageEditor } from '../ui/ImageEditor';
@@ -11,6 +11,8 @@ import { PerformanceTab } from './tabs/PerformanceTab';
 import { HealthTab } from './tabs/HealthTab';
 import { TestsTab } from './tabs/TestsTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
+import { TournamentsTab } from './tabs/TournamentsTab';
+import { generatePlayerSheet } from '../../utils/generatePlayerSheet';
 
 interface PlayerDetailsProps {
   player: any;
@@ -30,6 +32,8 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
     },
     injuries: player.injuries || [],
     tests: player.tests || [],
+    photo_url: player.photo_url || '',
+    tournaments: player.tournaments || [],
   });
   const [isSaving, setIsSaving] = useState(false);
   
@@ -49,18 +53,18 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
         status: editedPlayer.status,
         description: editedPlayer.description,
         performance: editedPlayer.performance,
-        injuries: editedPlayer.injuries,
-        tests: editedPlayer.tests,
+        injuries: editedPlayer.injuries || [],
+        tests: editedPlayer.tests || [],
+        tournaments: editedPlayer.tournaments || [],
+        photo_url: editedPlayer.photo_url || null,
+        id_card_front_url: editedPlayer.id_card_front_url || null,
+        id_card_back_url: editedPlayer.id_card_back_url || null,
         updated_at: new Date().toISOString()
       };
 
       if (editedPlayer.birth_date || editedPlayer.birthDate) {
         updateData.birth_date = editedPlayer.birth_date || editedPlayer.birthDate;
       }
-
-      // Include updated image URLs
-      if (editedPlayer.id_card_front_url) updateData.id_card_front_url = editedPlayer.id_card_front_url;
-      if (editedPlayer.id_card_back_url) updateData.id_card_back_url = editedPlayer.id_card_back_url;
 
       const { data, error } = await supabase
         .from('players')
@@ -86,28 +90,29 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
 
     const toastId = toast.loading('Subiendo imagen editada...');
     try {
+      const bucketName = editingImage.field === 'photo_url' ? 'player-photos' : 'player-documents';
+      
       // 1. Delete old image if it exists
       const oldUrl = editedPlayer[editingImage.field];
-      if (oldUrl && oldUrl.includes('player-documents')) {
+      if (oldUrl && oldUrl.includes(bucketName)) {
         try {
           // Extract path from public URL
-          const pathParts = oldUrl.split('player-documents/')[1];
+          const pathParts = oldUrl.split(`${bucketName}/`)[1];
           if (pathParts) {
             const filePath = pathParts.split('?')[0]; // Remove any query params
             await supabase.storage
-              .from('player-documents')
+              .from(bucketName)
               .remove([filePath]);
           }
         } catch (delError) {
           console.error('Error deleting old image:', delError);
-          // Continue with upload even if deletion fails (non-critical)
         }
       }
 
       // 2. Upload new image
       const fileName = `${player.id}/${editingImage.field}_${Date.now()}.jpg`;
       const { data, error } = await supabase.storage
-        .from('player-documents')
+        .from(bucketName)
         .upload(fileName, blob, {
           contentType: 'image/jpeg',
           upsert: true
@@ -116,7 +121,7 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
       if (error) throw error;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('player-documents')
+        .from(bucketName)
         .getPublicUrl(fileName);
 
       setEditedPlayer({
@@ -149,7 +154,7 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
         image={editingImage.url}
         onSave={handleUpdateImage}
         onCancel={() => setEditingImage(null)}
-        aspect={1.6 / 1}
+        aspect={editingImage.field === 'photo_url' ? 1 / 1 : 1.6 / 1}
       />
     );
   }
@@ -182,14 +187,24 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
               </p>
             </div>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Save size={20} className="mr-2" />
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => generatePlayerSheet(editedPlayer)}
+              className="border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <FileDown size={20} className="mr-2" />
+              Descargar Ficha
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <Save size={20} className="mr-2" />
+              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -214,11 +229,15 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
             <Shield size={16} className="mr-2" />
             Documentos
           </TabsTrigger>
+          <TabsTrigger value="tournaments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Trophy size={16} className="mr-2" />
+            Torneos
+          </TabsTrigger>
         </TabsList>
 
         {/* Información General */}
         <TabsContent value="info">
-          <PersonalInfoTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} />
+          <PersonalInfoTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} setEditingImage={setEditingImage} />
         </TabsContent>
 
         {/* Rendimiento */}
@@ -228,7 +247,7 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
 
         {/* Fisioterapia */}
         <TabsContent value="health">
-          <HealthTab editedPlayer={editedPlayer} />
+          <HealthTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} playerId={player.id} />
         </TabsContent>
 
         {/* Tests */}
@@ -239,6 +258,11 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
         {/* Documentos */}
         <TabsContent value="documents" className="mt-6">
           <DocumentsTab editedPlayer={editedPlayer} player={player} setEditingImage={setEditingImage} />
+        </TabsContent>
+
+        {/* Torneos */}
+        <TabsContent value="tournaments">
+          <TournamentsTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} playerId={player.id} />
         </TabsContent>
       </Tabs>
 

@@ -179,14 +179,32 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
                             <span>Zoom</span>
                             <span className="text-primary">{Math.round(zoom * 100)}%</span>
                         </div>
-                        <Slider
-                            value={[zoom]}
-                            min={1}
-                            max={3}
-                            step={0.1}
-                            onValueChange={([val]) => setZoom(val)}
-                            className="py-2"
-                        />
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full border-border bg-background hover:bg-muted"
+                                onClick={() => setZoom(prev => Math.max(1, prev - 0.1))}
+                            >
+                                <span className="text-xl font-bold">−</span>
+                            </Button>
+                            <Slider
+                                value={[zoom]}
+                                min={1}
+                                max={3}
+                                step={0.1}
+                                onValueChange={([val]) => setZoom(val)}
+                                className="flex-1"
+                            />
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full border-border bg-background hover:bg-muted"
+                                onClick={() => setZoom(prev => Math.min(3, prev + 0.1))}
+                            >
+                                <span className="text-xl font-bold">+</span>
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Rotation Control */}
@@ -197,27 +215,45 @@ export function ImageEditor({ image, onSave, onCancel, aspect = 1.6 / 1 }: Image
                             <span>Rotación</span>
                             <span className="text-primary">{rotation}°</span>
                         </div>
-                        <Slider
-                            value={[rotation]}
-                            min={0}
-                            max={360}
-                            step={90}
-                            onValueChange={([val]) => setRotation(val)}
-                            className="py-2"
-                        />
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full border-border bg-background hover:bg-muted"
+                                onClick={() => setRotation(prev => (prev - 90 + 360) % 360)}
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                            </Button>
+                            <Slider
+                                value={[rotation]}
+                                min={0}
+                                max={360}
+                                step={90}
+                                onValueChange={([val]) => setRotation(val)}
+                                className="flex-1"
+                            />
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 rounded-full border-border bg-background hover:bg-muted"
+                                onClick={() => setRotation(prev => (prev + 90) % 360)}
+                            >
+                                <RotateCcw className="w-4 h-4 scale-x-[-1]" />
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="flex gap-4 pt-2">
                         <Button 
                             variant="outline" 
-                            className={`flex-1 h-14 rounded-2xl font-semibold ${
+                            className={`flex-1 h-14 rounded-2xl font-semibold shadow-sm ${
                                 theme === 'dark'
                                     ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                                     : 'bg-foreground/5 border-border text-foreground hover:bg-foreground/10'
                             }`}
-                            onClick={() => setRotation((prev) => (prev + 90) % 360)}
+                            onClick={() => setRotation(0)}
                         >
-                            <RotateCcw className="mr-2 w-5 h-5" /> Rotar 90°
+                            Restaurar
                         </Button>
                         <Button 
                             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground h-14 rounded-2xl font-bold text-lg shadow-lg shadow-primary/20"

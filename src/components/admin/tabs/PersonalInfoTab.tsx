@@ -2,14 +2,19 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
 import { Card } from '../../ui/card';
-import { ChangeEvent } from 'react';
+import { Button } from '../../ui/button';
+import { User, Camera, Upload, Heart, Trophy, AlertCircle } from 'lucide-react';
+import { ChangeEvent, useRef } from 'react';
 
 interface PersonalInfoTabProps {
   editedPlayer: any;
   setEditedPlayer: (player: any) => void;
+  setEditingImage: (state: { url: string; field: string } | null) => void;
 }
 
-export function PersonalInfoTab({ editedPlayer, setEditedPlayer }: PersonalInfoTabProps) {
+export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage }: PersonalInfoTabProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return 'N/A';
     const today = new Date();
@@ -22,8 +27,101 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer }: PersonalInfoT
     return `${age} años`;
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setEditingImage({
+          url: event.target?.result as string,
+          field: 'photo_url'
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const recentInjuries = editedPlayer.injuries 
+    ? [...editedPlayer.injuries].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 2)
+    : [];
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      <Card className="bg-card border-border p-6">
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
+          <div className="relative group overflow-hidden">
+            <div className="w-40 h-40 bg-primary/10 border-2 border-primary/20 rounded-full flex items-center justify-center overflow-hidden shadow-lg transition-all duration-300 group-hover:border-primary/40">
+              {editedPlayer.photo_url ? (
+                <img 
+                  src={editedPlayer.photo_url} 
+                  alt={editedPlayer.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={80} className="text-primary/40" />
+              )}
+            </div>
+            <Button
+              onClick={handlePhotoClick}
+              size="icon"
+              className="absolute bottom-2 right-2 rounded-full w-10 h-10 shadow-lg border-2 border-background"
+            >
+              <Camera size={18} />
+            </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+          </div>
+          
+          <div className="flex-1 space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Foto de Jugador</h2>
+            <p className="text-muted-foreground text-sm max-w-sm">
+              Esta foto se utilizará para la ficha técnica y el carnet del jugador. 
+              Sube una foto clara del rostro.
+            </p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-3 pt-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePhotoClick}
+                className="text-xs h-9 border-border hover:bg-muted"
+              >
+                <Upload size={14} className="mr-2" /> Subir Nueva Foto
+              </Button>
+              {editedPlayer.photo_url && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setEditingImage({ url: editedPlayer.photo_url, field: 'photo_url' })}
+                  className="text-xs h-9 text-primary hover:bg-primary/5"
+                >
+                  Recortar Actual
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="bg-card border-border p-6">
         <h3 className="text-foreground text-xl font-semibold mb-4">Datos Personales</h3>
         <div className="space-y-4">
@@ -132,6 +230,83 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer }: PersonalInfoT
           </div>
         </div>
       </Card>
+      </div>
+
+      {/* Resumen de Ficha Técnica */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Antecedentes Médicos Recientes */}
+        <Card className="bg-card border-border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-foreground text-lg font-semibold flex items-center gap-2">
+              <Heart className="text-red-500" size={20} />
+              Historial Médico
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              {editedPlayer.injuries?.length || 0} registro(s)
+            </span>
+          </div>
+          {recentInjuries.length > 0 ? (
+            <div className="space-y-3">
+              {recentInjuries.map((injury: any, index: number) => (
+                <div key={index} className="bg-muted/30 border border-border/50 rounded-lg p-3">
+                  <div className="flex items-start justify-between mb-1">
+                    <p className="text-foreground font-semibold text-sm">{injury.type}</p>
+                    <span className="text-xs text-muted-foreground">{formatDate(injury.date)}</span>
+                  </div>
+                  {injury.description && (
+                    <p className="text-muted-foreground text-xs line-clamp-2">{injury.description}</p>
+                  )}
+                </div>
+              ))}
+              {editedPlayer.injuries?.length > 2 && (
+                <p className="text-xs text-primary text-center pt-2">
+                  Ver {editedPlayer.injuries.length - 2} más en pestaña Fisioterapia →
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6 border border-dashed border-border rounded-lg">
+              <Heart className="mx-auto text-muted-foreground mb-2 opacity-20" size={32} />
+              <p className="text-xs text-muted-foreground">Sin antecedentes registrados</p>
+            </div>
+          )}
+        </Card>
+
+        {/* Torneos Activos */}
+        <Card className="bg-card border-border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-foreground text-lg font-semibold flex items-center gap-2">
+              <Trophy className="text-yellow-500" size={20} />
+              Torneos Actuales
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              {editedPlayer.tournaments?.length || 0} torneo(s)
+            </span>
+          </div>
+          {editedPlayer.tournaments && editedPlayer.tournaments.length > 0 ? (
+            <div className="space-y-2">
+              {editedPlayer.tournaments.slice(0, 4).map((tournament: string, index: number) => (
+                <div key={index} className="flex items-center gap-2 bg-primary/5 border border-primary/20 rounded-lg p-2.5">
+                  <div className="bg-primary/20 p-1.5 rounded text-primary">
+                    <Trophy size={12} />
+                  </div>
+                  <span className="text-foreground text-sm font-medium flex-1 line-clamp-1">{tournament}</span>
+                </div>
+              ))}
+              {editedPlayer.tournaments.length > 4 && (
+                <p className="text-xs text-primary text-center pt-2">
+                  Ver {editedPlayer.tournaments.length - 4} más en pestaña Torneos →
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6 border border-dashed border-border rounded-lg">
+              <Trophy className="mx-auto text-muted-foreground mb-2 opacity-20" size={32} />
+              <p className="text-xs text-muted-foreground">Sin torneos asignados</p>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
