@@ -22,21 +22,22 @@ export function Header({ currentPage, onNavigate }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-24">
           {/* Logo */}
           <button 
             onClick={() => onNavigate('inicio')}
             className="flex items-center gap-3 group"
           >
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 border-2 border-primary/50">
-              <svg viewBox="0 0 24 24" className="w-7 h-7 text-primary-foreground" fill="currentColor">
-                <circle cx="12" cy="12" r="10" opacity="0.3"/>
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-              </svg>
+            <div className="w-12 h-16 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="GOLICA" 
+                className="w-12 h-16 object-contain"
+              />
             </div>
             <div className="hidden sm:block">
-              <span className="text-primary text-2xl tracking-wider" style={{ fontFamily: 'var(--font-display)' }}>GOL</span>
-              <span className="text-foreground text-2xl tracking-wider ml-1" style={{ fontFamily: 'var(--font-display)' }}>ICA</span>
+              <span className="text-primary text-2xl tracking-wider font-bold" style={{ fontFamily: 'var(--font-display)' }}>GOL</span>
+              <span className="text-foreground text-2xl tracking-wider font-bold ml-0.5" style={{ fontFamily: 'var(--font-display)' }}>ICA</span>
             </div>
           </button>
 
