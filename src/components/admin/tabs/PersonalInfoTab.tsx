@@ -121,6 +121,8 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
         </div>
       </Card>
 
+
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <Card className="bg-card border-border p-6">
         <h3 className="text-foreground text-xl font-semibold mb-4">Datos Personales</h3>
@@ -132,6 +134,26 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
               onChange={(e: ChangeEvent<HTMLInputElement>) => setEditedPlayer({ ...editedPlayer, name: e.target.value })}
               className="bg-input-background border-border text-foreground"
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-foreground">Peso (kg)</Label>
+              <Input
+                value={editedPlayer.weight || ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEditedPlayer({ ...editedPlayer, weight: e.target.value })}
+                placeholder="Ej: 75 kg"
+                className="bg-input-background border-border text-foreground"
+              />
+            </div>
+            <div>
+              <Label className="text-foreground">Estatura</Label>
+              <Input
+                value={editedPlayer.height || ''}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEditedPlayer({ ...editedPlayer, height: e.target.value })}
+                placeholder="Ej: 1.80 m"
+                className="bg-input-background border-border text-foreground"
+              />
+            </div>
           </div>
           <div>
             <Label className="text-foreground">Email</Label>
@@ -176,25 +198,30 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
         <h3 className="text-foreground text-xl font-semibold mb-4">Datos Deportivos</h3>
         <div className="space-y-4">
           <div>
-            <Label className="text-foreground">Categorías</Label>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23', 'Profesional'].map(cat => (
-                <label key={cat} className="flex items-center gap-2 p-2 border border-border rounded-md hover:bg-muted/50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="rounded border-border text-primary"
-                    checked={editedPlayer.category?.includes(cat) || false}
-                    onChange={(e) => {
-                      const currentCats = editedPlayer.category ? editedPlayer.category.split(', ') : [];
-                      const newCats = e.target.checked
-                        ? [...currentCats, cat].join(', ')
-                        : currentCats.filter((c: string) => c !== cat).join(', ');
-                      setEditedPlayer({ ...editedPlayer, category: newCats });
+            <Label className="text-foreground mb-2 block">Categorías</Label>
+            <div className="flex flex-wrap gap-2">
+              {['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23', 'Profesional'].map(cat => {
+                const isSelected = editedPlayer.category?.includes(cat);
+                return (
+                  <div 
+                    key={cat}
+                    onClick={() => {
+                        const currentCats = editedPlayer.category ? editedPlayer.category.split(', ') : [];
+                        const newCats = !isSelected
+                          ? [...currentCats, cat].join(', ')
+                          : currentCats.filter((c: string) => c !== cat).join(', ');
+                        setEditedPlayer({ ...editedPlayer, category: newCats });
                     }}
-                  />
-                  <span className="text-sm">{cat}</span>
-                </label>
-              ))}
+                    className={`cursor-pointer px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                        isSelected 
+                        ? 'bg-primary text-primary-foreground shadow-md scale-105' 
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'
+                    }`}
+                  >
+                    {cat}
+                  </div>
+                );
+              })}
             </div>
           </div>
           <div>
@@ -203,6 +230,15 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
               value={editedPlayer.position}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setEditedPlayer({ ...editedPlayer, position: e.target.value })}
               placeholder="Ej: Delantero, Mediocampista, Defensa..."
+              className="bg-input-background border-border text-foreground"
+            />
+          </div>
+          <div>
+            <Label className="text-foreground">Equipo de Procedencia</Label>
+            <Input
+              value={editedPlayer.previous_team || ''}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEditedPlayer({ ...editedPlayer, previous_team: e.target.value })}
+              placeholder="Ej: Club Deportivo X"
               className="bg-input-background border-border text-foreground"
             />
           </div>

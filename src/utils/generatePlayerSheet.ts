@@ -327,20 +327,28 @@ export const generatePlayerSheet = async (player: any) => {
                 <div class="value">${calculateAge(player.birth_date)}</div>
               </div>
               <div class="info-box">
+                <div class="label">Peso</div>
+                <div class="value">${player.weight || 'N/A'}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Estatura</div>
+                <div class="value">${player.height || 'N/A'}</div>
+              </div>
+              <div class="info-box">
                 <div class="label">Categoría</div>
                 <div class="value">${player.category || 'N/A'}</div>
               </div>
               <div class="info-box">
-                <div class="label">Email</div>
-                <div class="value" style="font-size: 12px;">${player.email}</div>
+                <div class="label">Posición</div>
+                <div class="value">${player.position || 'N/A'}</div>
+              </div>
+              <div class="info-box">
+                <div class="label">Equipo Anterior</div>
+                <div class="value">${player.previous_team || 'N/A'}</div>
               </div>
               <div class="info-box">
                 <div class="label">Teléfono</div>
                 <div class="value">${player.phone}</div>
-              </div>
-              <div class="info-box">
-                <div class="label">Posición</div>
-                <div class="value">${player.position || 'N/A'}</div>
               </div>
             </div>
           </div>

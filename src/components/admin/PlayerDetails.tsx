@@ -59,6 +59,9 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
         photo_url: editedPlayer.photo_url || null,
         id_card_front_url: editedPlayer.id_card_front_url || null,
         id_card_back_url: editedPlayer.id_card_back_url || null,
+        weight: editedPlayer.weight || null,
+        height: editedPlayer.height || null,
+        previous_team: editedPlayer.previous_team || null,
         updated_at: new Date().toISOString()
       };
 
