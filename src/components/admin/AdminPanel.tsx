@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun } from 'lucide-react';
 import { PlayersManagement } from './PlayersManagement';
+import { CoachDashboard } from '../coach/CoachDashboard';
+import { CoachesManagement } from './CoachesManagement';
 import { useTheme } from '../ThemeContext';
 
 interface AdminPanelProps {
@@ -17,8 +19,8 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const menuItems = [
     { id: 'jugadores', label: 'Jugadores', icon: Users, available: true },
     { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: false },
-    { id: 'entrenador', label: 'Entrenador', icon: UserCog, available: false },
-    { id: 'administrativo', label: 'Administrativo', icon: Settings, available: false },
+    { id: 'entrenador', label: 'Entrenador', icon: UserCog, available: true },
+    { id: 'administrativo', label: 'Gestión Entrenadores', icon: Settings, available: true },
   ];
 
   const renderContent = () => {
@@ -28,9 +30,9 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
       case 'fisioterapia':
         return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo de Fisioterapia - Próximamente</h2></div>;
       case 'entrenador':
-        return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo de Entrenador - Próximamente</h2></div>;
+        return <CoachDashboard user={user} onLogout={onLogout} />;
       case 'administrativo':
-        return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo Administrativo - Próximamente</h2></div>;
+        return <CoachesManagement />;
       default:
         return <PlayersManagement user={user} />;
     }

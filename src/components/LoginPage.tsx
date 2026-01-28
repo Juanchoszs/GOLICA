@@ -41,23 +41,43 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(true);
 
     try {
-      const { data: admin, error } = await supabase
+      // 1. Try Admin Login
+      console.log('Attempting Admin login with:', loginData.identification);
+      const { data: admin, error: adminError } = await supabase
         .from('admins')
         .select('*')
         .eq('identification', loginData.identification)
         .eq('password', loginData.password)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid 406 errors on 0 rows
 
-      if (error || !admin) {
-        toast.error('Credenciales incorrectas');
-      } else if (onLogin) {
+      if (adminError) console.error('Admin login error:', adminError);
+
+      if (admin) {
         toast.success('¡Inicio de sesión exitoso! Bienvenido al panel de administración.');
         const { password: _, ...adminSafedata } = admin;
-        onLogin({
-          ...adminSafedata,
-          role: 'admin'
-        });
+        if (onLogin) onLogin({ ...adminSafedata, role: 'admin' });
+        return;
       }
+
+      // 2. Try Coach Login (Primary Fallback)
+      console.log('Admin not found, trying Coach login...');
+      const { data: coach, error: coachError } = await supabase
+        .from('coaches')
+        .select('*')
+        .eq('identification', loginData.identification)
+        .eq('password', loginData.password)
+        .maybeSingle();
+      
+      if (coachError) console.error('Coach login error:', coachError);
+
+      if (coach) {
+        toast.success(`¡Bienvenido Profe ${coach.name}!`);
+        if (onLogin) onLogin({ ...coach, role: 'coach' });
+        return;
+      }
+
+      // If neither found
+      toast.error('Credenciales incorrectas');
     } catch (error) {
       console.error('Error en login:', error);
       toast.error('Error al conectar con el servidor');
@@ -169,27 +189,28 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <div className="order-1 lg:order-2">
             <Card className="bg-card border-border p-8">
               <Tabs defaultValue="player" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-8 bg-muted/30 p-1">
-                  <TabsTrigger
-                    value="player"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                  >
-                    Jugador
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="admin"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                  >
-                    <Shield size={14} className="mr-1 hidden sm:inline" />
-                    Administración
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="register"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                  >
-                    Registro
-                  </TabsTrigger>
-                </TabsList>
+                  <TabsList className="flex w-full mb-8 bg-muted/30 p-1">
+                    <TabsTrigger
+                      value="player"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
+                    >
+                      Jugador
+                    </TabsTrigger>
+
+                    <TabsTrigger
+                      value="admin"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
+                    >
+                      <Shield size={14} className="mr-1 hidden sm:inline" />
+                      Admin
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="register"
+                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
+                    >
+                      Registro
+                    </TabsTrigger>
+                  </TabsList>
 
                 {/* Player Login Form */}
                 <TabsContent value="player">
@@ -267,6 +288,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     </Button>
                   </form>
                 </TabsContent>
+
+
 
                 {/* Admin Login Form */}
                 <TabsContent value="admin">

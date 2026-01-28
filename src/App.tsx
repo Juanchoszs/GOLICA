@@ -7,9 +7,10 @@ import { AboutPage } from './components/AboutPage';
 import { AchievementsPage } from './components/AchievementsPage';
 import { ContactPage } from './components/ContactPage';
 import { LoginPage } from './components/LoginPage';
-import { AdminPanel } from './components/admin/AdminPanel';
-import { PlayerPortal } from './components/PlayerPortal';
-import { Toaster } from './components/ui/sonner';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+import { PlayerDashboard } from './components/player/PlayerDashboard';
+import { CoachDashboard } from './components/coach/CoachDashboard';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -58,11 +59,9 @@ export default function App() {
         return <LoginPage onLogin={handleLogin} />;
       case 'admin':
         if (!user) return <LoginPage onLogin={handleLogin} />;
-        return user.role === 'admin' ? (
-          <AdminPanel user={user} onLogout={handleLogout} />
-        ) : (
-          <PlayerPortal user={user} onLogout={handleLogout} />
-        );
+        if (user.role === 'admin') return <AdminPanel user={user} onLogout={handleLogout} />;
+        if (user.role === 'coach') return <CoachDashboard user={user} onLogout={handleLogout} />;
+        return <PlayerPortal user={user} onLogout={handleLogout} />;
       default:
         return <HomePage onNavigate={setCurrentPage} />;
     }
@@ -72,7 +71,20 @@ export default function App() {
     <ThemeProvider>
       <div className="min-h-screen bg-background transition-colors duration-300">
         {currentPage !== 'admin' && <Header currentPage={currentPage} onNavigate={setCurrentPage} />}
-        <main>{renderPage()}</main>
+        <main>
+          {user && user.role === 'coach' && currentPage === 'admin' ? (
+            <CoachDashboard 
+                coach={user} 
+                onLogout={() => {
+                    setUser(null);
+                    toast.success('Sesión cerrada correctamente');
+                    setCurrentPage('inicio'); // Redirect to home after logout
+                }} 
+            />
+          ) : (
+            renderPage()
+          )}
+        </main>
         {currentPage !== 'login' && currentPage !== 'contacto' && currentPage !== 'admin' && <Footer />}
         {currentPage === 'contacto' && <Footer />}
         <Toaster />
