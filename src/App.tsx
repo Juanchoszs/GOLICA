@@ -7,10 +7,17 @@ import { AboutPage } from './components/AboutPage';
 import { AchievementsPage } from './components/AchievementsPage';
 import { ContactPage } from './components/ContactPage';
 import { LoginPage } from './components/LoginPage';
+<<<<<<< HEAD
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PlayerDashboard } from './components/player/PlayerDashboard';
 import { CoachDashboard } from './components/coach/CoachDashboard';
 import { Toaster } from 'sonner';
+=======
+import { AdminPanel } from './components/admin/AdminPanel';
+import { CoachPanel } from './components/coach/CoachPanel';
+import { PlayerPortal } from './components/PlayerPortal';
+import { Toaster } from './components/ui/sonner';
+>>>>>>> 0da42fe (Backup de convocatorias)
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -60,7 +67,11 @@ export default function App() {
       case 'admin':
         if (!user) return <LoginPage onLogin={handleLogin} />;
         if (user.role === 'admin') return <AdminPanel user={user} onLogout={handleLogout} />;
+<<<<<<< HEAD
         if (user.role === 'coach') return <CoachDashboard user={user} onLogout={handleLogout} />;
+=======
+        if (user.role === 'coach') return <CoachPanel user={user} onLogout={handleLogout} />;
+>>>>>>> 0da42fe (Backup de convocatorias)
         return <PlayerPortal user={user} onLogout={handleLogout} />;
       default:
         return <HomePage onNavigate={setCurrentPage} />;

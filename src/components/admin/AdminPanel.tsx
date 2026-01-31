@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun } from 'lucide-react';
+import { CallUpManager } from './CallUpManager';
 import { PlayersManagement } from './PlayersManagement';
 import { CoachDashboard } from '../coach/CoachDashboard';
 import { CoachesManagement } from './CoachesManagement';
@@ -18,19 +19,29 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
   const menuItems = [
     { id: 'jugadores', label: 'Jugadores', icon: Users, available: true },
+    { id: 'entrenador', label: 'Convocatorias', icon: UserCog, available: true }, // Updated label and availability
     { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: false },
+<<<<<<< HEAD
     { id: 'entrenador', label: 'Entrenador', icon: UserCog, available: true },
     { id: 'administrativo', label: 'Gestión Entrenadores', icon: Settings, available: true },
+=======
+    { id: 'administrativo', label: 'Administrativo', icon: Settings, available: false },
+>>>>>>> 0da42fe (Backup de convocatorias)
   ];
 
   const renderContent = () => {
     switch (activeSection) {
       case 'jugadores':
         return <PlayersManagement user={user} />;
+      case 'entrenador':
+        return <CallUpManager />;
       case 'fisioterapia':
         return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo de Fisioterapia - Próximamente</h2></div>;
+<<<<<<< HEAD
       case 'entrenador':
         return <CoachDashboard user={user} onLogout={onLogout} />;
+=======
+>>>>>>> 0da42fe (Backup de convocatorias)
       case 'administrativo':
         return <CoachesManagement />;
       default:
