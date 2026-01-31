@@ -50,25 +50,16 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         .eq('password', loginData.password)
         .maybeSingle(); // Use maybeSingle to avoid 406 errors on 0 rows
 
-<<<<<<< HEAD
       if (adminError) console.error('Admin login error:', adminError);
 
       if (admin) {
-        toast.success('¡Inicio de sesión exitoso! Bienvenido al panel de administración.');
-        const { password: _, ...adminSafedata } = admin;
-        if (onLogin) onLogin({ ...adminSafedata, role: 'admin' });
-        return;
-=======
-      if (error || !admin) {
-        toast.error('Credenciales incorrectas');
-      } else if (onLogin) {
         toast.success(`¡Inicio de sesión exitoso! Bienvenido ${admin.name}.`);
         const { password: _, ...adminSafedata } = admin;
-        onLogin({
+        onLogin?.({
           ...adminSafedata,
           role: admin.role || 'admin'
         });
->>>>>>> 0da42fe (Backup de convocatorias)
+        return; // Exit if admin login is successful
       }
 
       // 2. Try Coach Login (Primary Fallback)

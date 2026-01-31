@@ -63,14 +63,14 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         // Structure: { category, alineacion, convocatoria: [...] }
         // User provided: "convocatoria: [{ posicion, jugadorId }]"
         
-        // Transform assignments Record<posId, playerId> to Array
+        // Transform assignments Record<posId, playerId> to Array with exact keys requested
         const convocatoriaArray = Object.entries(callup.assignments).map(([posId, playerId]) => ({
-            posicion: posId,
+            posicionId: posId,
             jugadorId: playerId
         }));
 
         const payload = {
-            category: callup.category,
+            categoria: callup.category,
             alineacion: callup.lineupId,
             convocatoria: convocatoriaArray,
             created_at: new Date().toISOString()

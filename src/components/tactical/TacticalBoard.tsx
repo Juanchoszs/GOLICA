@@ -12,7 +12,7 @@ import {
   DragOverEvent
 } from '@dnd-kit/core';
 import { toast } from 'sonner';
-import { Search, Save, RotateCcw, ChevronLeft } from 'lucide-react';
+import { Search, Save, RotateCcw, ChevronLeft, UserCog } from 'lucide-react';
 
 import { Player, CallUp } from './types';
 import { LINEUPS } from './data';
@@ -133,20 +133,25 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
     }
   };
 
+  const handleLineupChange = (val: string) => {
+    if (Object.keys(assignments).length > 0) {
+        if(!confirm('Cambiar la alineación reseteará las posiciones. ¿Continuar?')) return;
+        setAssignments({});
+    }
+    setSelectedLineupId(val);
+  };
+
   const handleSaveWrapper = () => {
     // Validations
-    // 1. Must have goalkeeper?
-    const gkPos = currentLineup.positions.find(p => p.role === 'keeper');
+    const gkPos = currentLineup.positions.find(p => p.role === 'Portero');
     if (gkPos && !assignments[gkPos.id]) {
-      toast.error('¡Falta el arquero!');
+      toast.error('¡Falta el Portero (GK)! 🛡️');
       return;
     }
     
-    // 2. All positions full?
-    // "No se puede guardar una convocatoria sin... Todas las posiciones completas"
-    const missing = currentLineup.positions.filter(p => !assignments[p.id]);
-    if (missing.length > 0) {
-      toast.error(`Faltan ${missing.length} jugadores por asignar`);
+    const assignedCount = Object.keys(assignments).length;
+    if (assignedCount < 11) {
+      toast.error(`¡Equipo incompleto! Faltan ${11 - assignedCount} jugadores. ⚽`);
       return;
     }
 
@@ -156,7 +161,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       assignments,
       createdAt: new Date().toISOString()
     });
-    toast.success('Convocatoria guardada exitosamente');
+    toast.success('Convocatoria guardada exitosamente 🏆');
   };
 
   const draggedPlayer = activeId ? getPlayer(activeId) : null;
@@ -167,48 +172,49 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       onDragStart={handleDragStart} 
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-col h-[calc(100vh-100px)] min-h-[600px] bg-background">
+      <div className="flex flex-col h-screen max-h-screen bg-background overflow-hidden">
         
-        {/* Toolbar */}
-        <div className="flex items-center justify-between p-4 border-b border-border bg-card">
+        {/* Professional Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card shadow-sm z-50">
           <div className="flex items-center gap-4">
-             <Button variant="ghost" size="icon" onClick={onClose}>
+             <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-primary/10 hover:text-primary transition-colors">
                <ChevronLeft />
              </Button>
              <div>
-               <h2 className="text-xl font-bold text-foreground">Convocatoria {categoryName}</h2>
-               <p className="text-xs text-muted-foreground">{currentLineup.name} • {assignedPlayerIds.length}/11 asignados</p>
+               <h2 className="text-xl font-bold text-foreground">Crear Convocatoria</h2>
+               <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">{categoryName} • {currentLineup.name}</p>
              </div>
           </div>
 
-          <div className="flex items-center gap-2">
-             <Button variant="outline" onClick={handleReset} className="text-muted-foreground hover:text-destructive">
+          <div className="flex items-center gap-3">
+             <div className="hidden md:flex items-center gap-2 mr-4 px-3 py-1.5 bg-muted/50 rounded-full border border-border">
+                <div className={`w-2 h-2 rounded-full ${Object.keys(assignments).length === 11 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-yellow-500 animate-pulse'}`} />
+                <span className="text-[10px] font-bold uppercase">{Object.keys(assignments).length} / 11 JUGADORES</span>
+             </div>
+             <Button variant="outline" onClick={handleReset} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all border-dashed">
                <RotateCcw size={16} className="mr-2" />
                Resetear
              </Button>
-             <Button onClick={handleSaveWrapper} className="bg-primary text-primary-foreground hover:bg-primary/90">
+             <Button onClick={handleSaveWrapper} className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 font-bold px-6">
                <Save size={16} className="mr-2" />
-               Guardar Convocatoria
+               Guardar
              </Button>
           </div>
         </div>
 
-        {/* Main 3 Column Layout */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 flex overflow-hidden">
           
-          {/* Left: Configuration (2 cols) */}
-          <aside className="hidden lg:flex lg:col-span-2 flex-col p-4 border-r border-border bg-muted/10 overflow-y-auto">
-             <div className="space-y-6">
-               <div>
-                 <label className="text-sm font-medium mb-2 block text-muted-foreground">Táctica</label>
-                 <Select value={selectedLineupId} onValueChange={(val) => {
-                    if (Object.keys(assignments).length > 0) {
-                        if(!confirm('Cambiar la alineación reseteará las posiciones. ¿Continuar?')) return;
-                        setAssignments({});
-                    }
-                    setSelectedLineupId(val);
-                 }}>
-                   <SelectTrigger className="w-full bg-input-background border-border">
+          {/* Left Panel: Tactics & Config */}
+          <aside className="w-72 hidden xl:flex flex-col p-6 border-r border-border bg-card/50 overflow-y-auto">
+             <div className="space-y-8">
+               <section>
+                 <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-widest flex items-center gap-2">
+                   <UserCog size={16} />
+                   Sistema Táctico
+                 </h3>
+                 <Select value={selectedLineupId} onValueChange={handleLineupChange}>
+                   <SelectTrigger className="w-full bg-input-background border-border h-11">
                      <SelectValue placeholder="Seleccionar" />
                    </SelectTrigger>
                    <SelectContent>
@@ -217,86 +223,104 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
                      ))}
                    </SelectContent>
                  </Select>
-               </div>
+               </section>
 
-               <Card className="p-4 bg-primary/5 border-primary/20">
-                  <h4 className="text-sm font-semibold text-primary mb-2">Instrucciones</h4>
-                  <ul className="text-xs text-muted-foreground space-y-2 list-disc list-inside">
-                    <li>Selecciona una alineación táctica.</li>
-                    <li>Arrastra jugadores desde la lista derecha a las posiciones en la cancha.</li>
-                    <li>Para remover, arrastra el jugador fuera de la cancha.</li>
-                    <li>Todos los campos son obligatorios para guardar.</li>
+               <section className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                  <h4 className="text-xs font-bold text-primary mb-3 uppercase tracking-tighter">Guía de Uso</h4>
+                  <ul className="text-[11px] text-muted-foreground space-y-3">
+                    <li className="flex gap-2">
+                       <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">1</span>
+                       Elige la formación táctica ideal.
+                    </li>
+                    <li className="flex gap-2">
+                       <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">2</span>
+                       Arrastra jugadores a las posiciones indicadas.
+                    </li>
+                    <li className="flex gap-2">
+                       <span className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">3</span>
+                       Sueltas fuera para remover o sobre otro para cambiar.
+                    </li>
                   </ul>
-               </Card>
+               </section>
 
-                {/* Mini Stats or Info could go here */}
-                <div>
-                  <h4 className="text-sm font-medium mb-2 text-muted-foreground">Resumen</h4>
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="bg-card border border-border rounded p-2">
-                        <div className="text-xl font-bold">{assignments[currentLineup.positions.find(p=>p.role === 'keeper')?.id || ''] ? 1 : 0}/1</div>
-                        <div className="text-[10px] text-muted-foreground">Arqueros</div>
+               <section>
+                  <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-widest flex items-center gap-2">
+                    <Search size={16} />
+                    Resumen Visual
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-card border border-border rounded-xl p-3 shadow-sm">
+                        <div className="text-2xl font-black text-primary">{assignments[currentLineup.positions.find(p=>p.role === 'Portero')?.id || ''] ? 1 : 0}/1</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase">Portero</div>
                     </div>
-                    <div className="bg-card border border-border rounded p-2">
-                        <div className="text-xl font-bold">{Object.keys(assignments).length}/11</div>
-                        <div className="text-[10px] text-muted-foreground">Total</div>
+                    <div className="bg-card border border-border rounded-xl p-3 shadow-sm">
+                        <div className="text-2xl font-black text-foreground">{Object.keys(assignments).length}/11</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase">Total</div>
                     </div>
                   </div>
-                </div>
+               </section>
              </div>
           </aside>
 
-          {/* Center: Field (7 cols) */}
-          <section className="lg:col-span-7 bg-black/5 p-4 flex items-center justify-center overflow-auto relative min-h-[500px]">
-             <div className="w-full max-w-[600px] shadow-2xl rounded-lg">
-               <SoccerField>
-                 {currentLineup.positions.map((pos) => {
-                    const assignedPlayerId = assignments[pos.id];
-                    const assignedPlayer = assignedPlayerId ? getPlayer(assignedPlayerId) : undefined;
-                    
-                    return (
-                      <DropZone 
-                        key={pos.id} 
-                        position={pos} 
-                        assignedPlayer={assignedPlayer || null} 
-                      />
-                    );
-                 })}
-               </SoccerField>
-             </div>
+          {/* Center: Vertical Tactical Field */}
+          <section className="flex-1 bg-muted/30 p-4 md:p-8 flex items-center justify-center overflow-auto scrollbar-hide">
+              <div className="w-full h-full max-h-screen flex items-center justify-center">
+                 <SoccerField key={selectedLineupId}>
+                   {currentLineup.positions.map((pos) => {
+                      const assignedPlayerId = assignments[pos.id];
+                      const assignedPlayer = assignedPlayerId ? getPlayer(assignedPlayerId) : undefined;
+                      
+                      return (
+                        <DropZone 
+                          key={`${selectedLineupId}_${pos.id}`} 
+                          position={pos} 
+                          assignedPlayer={assignedPlayer || null} 
+                        />
+                      );
+                   })}
+                 </SoccerField>
+              </div>
           </section>
 
-          {/* Right: Players Panel (3 cols) */}
-          <aside className="lg:col-span-3 flex flex-col border-l border-border bg-card">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold mb-3">Jugadores Disponibles</h3>
+          {/* Right Panel: Player Selection */}
+          <aside className="w-80 hidden lg:flex flex-col border-l border-border bg-card shadow-2xl z-40">
+            <div className="p-6 border-b border-border bg-card/80 backdrop-blur-md sticky top-0">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                Plantilla Disponible
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase">{players.length}</span>
+              </h3>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input 
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Buscar jugador..." 
-                  className="pl-9 h-9 bg-input-background"
+                  placeholder="Filtrar por nombre..." 
+                  className="pl-9 h-11 bg-input-background border-border rounded-xl focus:ring-primary/20"
                 />
               </div>
             </div>
 
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-3">
+            <ScrollArea className="flex-1 p-6">
+              <div className="space-y-4">
                 {filteredPlayers.length === 0 && (
-                   <p className="text-center text-sm text-muted-foreground py-8">No hay jugadores encontrados</p>
+                   <div className="text-center py-12">
+                      <p className="text-muted-foreground text-sm italic">No se encontraron jugadores</p>
+                   </div>
                 )}
-                {filteredPlayers.map(player => {
-                  const isAssigned = userIsAssigned(player.id, assignments);
-                  
-                  return (
-                    <DraggablePlayer 
-                      key={player.id} 
-                      player={{...player, status: isAssigned ? 'assigned' : player.status}} 
-                      variant="list" 
-                    />
-                  );
-                })}
+                <div className="grid grid-cols-1 gap-3">
+                  {filteredPlayers.map(player => {
+                    const isAssigned = userIsAssigned(player.id, assignments);
+                    
+                    return (
+                      <div key={player.id} className={`transition-all duration-300 ${isAssigned ? 'opacity-30 grayscale scale-95 pointer-events-none' : ''}`}>
+                         <DraggablePlayer 
+                           player={player} 
+                           variant="list" 
+                         />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </ScrollArea>
           </aside>
@@ -305,25 +329,11 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       
       <DragOverlay>
         {activeId && draggedPlayer ? (
-           <div className="opacity-90 pointer-events-none">
-             {/* We visually mimic the Field Variant when dragging from list to field for better UX? 
-                 Or stick to source variant? 
-                 Actually, transforming from Card to Circle is cool but hard to align.
-                 Let's stick to showing the Card if dragging from List, and Circle if dragging from Field.
-             */}
-             <DraggablePlayer 
-               player={draggedPlayer} 
-               variant={draggedPlayer.id === activeId /* Check origin via event data? hard to access here without tracking */ ? 'list' : 'field'} 
-             />
-             {/* 
-                Hack: The component DraggablePlayer renders layout based on props.
-                We don't know the origin easily here unless we store it in state.
-                I'll wrap DraggablePlayer to handle 'drag-overlay' mode or just render a generic clean version.
-                
-                Actually I can look at active.data.current.origin inside DragOverlay? No, useDndContext?
-                No, simple way: 
-             */}
-              <div className="bg-primary text-white px-3 py-1.5 rounded-full font-bold shadow-xl border-2 border-white">
+           <div className="opacity-90 pointer-events-none shadow-2xl scale-110 rotate-3 transition-transform">
+              <div className="bg-primary text-white px-5 py-3 rounded-full font-bold shadow-[0_10px_30px_rgba(var(--primary),0.4)] border-2 border-white flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                   {draggedPlayer.identification.slice(-2)}
+                </div>
                 {draggedPlayer.name}
               </div>
            </div>
