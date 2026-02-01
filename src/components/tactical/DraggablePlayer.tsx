@@ -29,19 +29,19 @@ export function DraggablePlayer({ player, variant = 'list', label, onRemove }: D
         style={style}
         {...attributes}
         {...listeners}
-        className="relative flex flex-col items-center cursor-move group"
+        className="relative flex flex-col items-center cursor-move group pointer-events-auto"
       >
-        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-white bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-lg overflow-hidden relative transition-transform group-hover:scale-105">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full border-2 border-white bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-lg overflow-hidden relative transition-transform group-hover:scale-105">
            {player.image ? (
             <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
            ) : (
             <div className="flex flex-col items-center">
-                <span className="text-[10px] leading-tight opacity-70 font-normal">{label}</span>
-                <span className="text-xs sm:text-sm">{player.identification.slice(-2)}</span> 
+                <span className="text-[11px] leading-tight opacity-70 font-normal">{label}</span>
+                <span className="text-[12px] sm:text-[13px]">{player.identification.slice(-2)}</span>
             </div>
            )}
         </div>
-        <div className="mt-1.5 px-2 py-0.5 bg-black/80 rounded text-[10px] sm:text-xs text-white  truncate max-w-[90px] text-center border border-white/20 shadow-xl backdrop-blur-sm">
+        <div className="mt-1 px-2 py-0.5 bg-black/80 rounded text-[11px] sm:text-[12px] text-white  truncate max-w-[120px] text-center border border-white/20 shadow-xl backdrop-blur-sm">
           {player.name.split(' ')[0]}
         </div>
       </div>

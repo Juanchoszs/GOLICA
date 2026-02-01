@@ -19,37 +19,35 @@ export function DropZone({ position, assignedPlayer }: DropZoneProps) {
     <div
       ref={setNodeRef}
       className={`
-        absolute w-16 h-16 sm:w-20 sm:h-20
-        flex items-center justify-center transition-all duration-300
-        ${isOver ? 'scale-110 z-20' : 'z-10'}
+        absolute w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28
+        flex items-center justify-center transition-all duration-200
+        ${isOver ? 'scale-110 z-30' : 'z-20'}
       `}
-      style={{ 
-        left: `${position.x}%`, 
+      style={{
+        left: `${position.x}%`,
         top: `${position.y}%`,
-        transform: 'translate(-50%, -50%)'
+        transform: 'translate(-50%, -50%)',
+        pointerEvents: 'auto'
       }}
     >
       {assignedPlayer ? (
-        <div className="relative group animate-in fade-in zoom-in duration-300">
-            <DraggablePlayer player={assignedPlayer} variant="field" label={position.label} />
-            
-            {/* Tooltip on Hover */}
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/90 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/20 shadow-xl z-50">
-              {assignedPlayer.name}
-            </div>
+        <div className="relative group">
+          <DraggablePlayer player={assignedPlayer} variant="field" label={position.label} />
+          <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-black/85 text-white text-[11px] px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10 shadow-lg z-50">
+            {assignedPlayer.name}
+          </div>
         </div>
       ) : (
         <div className={`
-          w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-dashed flex flex-col items-center justify-center
-          transition-all duration-300 backdrop-blur-md shadow-lg
-          ${isOver ? 'border-yellow-400 bg-yellow-400/20 scale-110 ring-4 ring-yellow-400/20' : 'border-white/30 bg-black/30 hover:border-white/60'}
+          w-full h-full rounded-full flex flex-col items-center justify-center
+          transition-all duration-200 bg-white/6 backdrop-blur-sm
+          ${isOver ? 'ring-4 ring-white/20 bg-white/10 shadow-lg' : 'border border-white/20'}
         `}>
-            <span className="text-white/90 font-bold text-[10px] sm:text-xs tracking-tighter">{position.label}</span>
-            <Plus size={12} className={`text-white/40 mt-0.5 transition-transform ${isOver ? 'rotate-90 scale-125 text-yellow-400' : ''}`} />
-            
-            <div className="absolute -bottom-6 text-[8px] sm:text-[10px] text-white/60 font-medium uppercase tracking-widest">
-              {position.role}
-            </div>
+          <div className="text-white/90 font-bold text-[14px] sm:text-[16px] tracking-tighter -mb-1">{position.label}</div>
+          <Plus size={20} className={`text-white/60 mt-0.5 transition-transform ${isOver ? 'translate-y-0 scale-110 text-white' : 'translate-y-1'}`} />
+          <div className="absolute -bottom-6 text-[10px] sm:text-[11px] text-white/70 font-medium uppercase tracking-wider">
+            {position.role}
+          </div>
         </div>
       )}
     </div>

@@ -15,10 +15,11 @@ import { toast } from 'sonner';
 import { Search, Save, RotateCcw, ChevronLeft, UserCog } from 'lucide-react';
 
 import { Player, CallUp } from './types';
-import { LINEUPS } from './data';
+import { FORMATIONS } from './formations';
 import { DraggablePlayer } from './DraggablePlayer';
-import { DropZone } from './DropZone';
-import { SoccerField } from './SoccerField';
+import { SoccerPitch } from './SoccerPitch';
+import { LineupSlots } from './LineupSlots';
+import { BenchPlayers } from './BenchPlayers';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -48,7 +49,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
   );
 
   const currentLineup = useMemo(() => 
-    LINEUPS.find(l => l.id === selectedLineupId) || LINEUPS[0]
+    FORMATIONS.find(l => l.id === selectedLineupId) || FORMATIONS[0]
   , [selectedLineupId]);
 
   // Derived state: assigned players
@@ -218,7 +219,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
                      <SelectValue placeholder="Seleccionar" />
                    </SelectTrigger>
                    <SelectContent>
-                     {LINEUPS.map(l => (
+                     {FORMATIONS.map(l => (
                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                      ))}
                    </SelectContent>
@@ -265,65 +266,20 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
           {/* Center: Vertical Tactical Field */}
           <section className="flex-1 bg-muted/30 p-4 md:p-8 flex items-center justify-center overflow-auto scrollbar-hide">
               <div className="w-full h-full max-h-screen flex items-center justify-center">
-                 <SoccerField key={selectedLineupId}>
-                   {currentLineup.positions.map((pos) => {
-                      const assignedPlayerId = assignments[pos.id];
-                      const assignedPlayer = assignedPlayerId ? getPlayer(assignedPlayerId) : undefined;
-                      
-                      return (
-                        <DropZone 
-                          key={`${selectedLineupId}_${pos.id}`} 
-                          position={pos} 
-                          assignedPlayer={assignedPlayer || null} 
-                        />
-                      );
-                   })}
-                 </SoccerField>
+                 <SoccerPitch key={selectedLineupId}>
+                   <LineupSlots positions={currentLineup.positions} assignments={assignments} getPlayer={getPlayer} />
+                 </SoccerPitch>
               </div>
           </section>
 
           {/* Right Panel: Player Selection */}
-          <aside className="w-80 hidden lg:flex flex-col border-l border-border bg-card shadow-2xl z-40">
-            <div className="p-6 border-b border-border bg-card/80 backdrop-blur-md sticky top-0">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                Plantilla Disponible
-                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase">{players.length}</span>
-              </h3>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                <Input 
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Filtrar por nombre..." 
-                  className="pl-9 h-11 bg-input-background border-border rounded-xl focus:ring-primary/20"
-                />
-              </div>
-            </div>
-
-            <ScrollArea className="flex-1 p-6">
-              <div className="space-y-4">
-                {filteredPlayers.length === 0 && (
-                   <div className="text-center py-12">
-                      <p className="text-muted-foreground text-sm italic">No se encontraron jugadores</p>
-                   </div>
-                )}
-                <div className="grid grid-cols-1 gap-3">
-                  {filteredPlayers.map(player => {
-                    const isAssigned = userIsAssigned(player.id, assignments);
-                    
-                    return (
-                      <div key={player.id} className={`transition-all duration-300 ${isAssigned ? 'opacity-30 grayscale scale-95 pointer-events-none' : ''}`}>
-                         <DraggablePlayer 
-                           player={player} 
-                           variant="list" 
-                         />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </ScrollArea>
-          </aside>
+          <BenchPlayers 
+            players={players} 
+            filteredPlayers={filteredPlayers}
+            searchTerm={searchTerm}
+            onSearchChange={v => setSearchTerm(v)}
+            assignedPlayerIds={assignedPlayerIds}
+          />
         </div>
       </div>
       
