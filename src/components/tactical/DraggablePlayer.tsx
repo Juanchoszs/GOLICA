@@ -1,83 +1,136 @@
-
+import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import { Player } from './types';
-import { User, GripVertical } from 'lucide-react';
+import { GripVertical } from 'lucide-react';
 
 interface DraggablePlayerProps {
   player: Player;
-  variant?: 'list' | 'field';
-  label?: string; // e.g. "GK", "ST"
-  onRemove?: () => void;
+  origin: 'list' | 'field';
+  isAssigned?: boolean;
 }
 
-export function DraggablePlayer({ player, variant = 'list', label, onRemove }: DraggablePlayerProps) {
+export function DraggablePlayer({ player, origin, isAssigned = false }: DraggablePlayerProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: player.id,
-    data: { player, origin: variant },
+    data: { origin },
   });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 50 : 'auto',
-  };
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 1000,
+      }
+    : undefined;
 
-  if (variant === 'field') {
+  // Diseño para jugador en la cancha
+  if (origin === 'field') {
     return (
       <div
         ref={setNodeRef}
         style={style}
-        {...attributes}
         {...listeners}
-        className="relative flex flex-col items-center cursor-move group pointer-events-auto"
+        {...attributes}
+        className={`
+          group relative
+          w-16 h-16 md:w-20 md:h-20
+          ${isDragging ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
+          transition-all duration-200
+          cursor-grab active:cursor-grabbing
+        `}
       >
-        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full border-2 border-white bg-primary text-primary-foreground flex items-center justify-center font-bold shadow-lg overflow-hidden relative transition-transform group-hover:scale-105">
-           {player.image ? (
-            <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
-           ) : (
-            <div className="flex flex-col items-center">
-                <span className="text-[11px] leading-tight opacity-70 font-normal">{label}</span>
-                <span className="text-[12px] sm:text-[13px]">{player.identification.slice(-2)}</span>
+        {/* Contenedor principal */}
+        <div className="relative w-full h-full">
+          {/* Fondo con gradiente */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-200" />
+          
+          {/* Borde superior colorido */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60 rounded-t-2xl" />
+          
+          {/* Contenido */}
+          <div className="relative h-full flex flex-col items-center justify-center p-2">
+            {/* Avatar con número */}
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-black text-xs md:text-sm shadow-md mb-1">
+              {player.identification.slice(-2)}
             </div>
-           )}
-        </div>
-        <div className="mt-1 px-2 py-0.5 bg-black/80 rounded text-[11px] sm:text-[12px] text-white  truncate max-w-[120px] text-center border border-white/20 shadow-xl backdrop-blur-sm">
-          {player.name.split(' ')[0]}
+            
+            {/* Nombre del jugador */}
+            <div className="text-[9px] md:text-[10px] font-bold text-gray-800 text-center leading-tight line-clamp-2 w-full">
+              {player.name.split(' ').slice(0, 2).join(' ')}
+            </div>
+          </div>
+
+          {/* Indicador de arrastre */}
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-3 h-3 text-white" />
+          </div>
+
+          {/* Efecto hover */}
+          <div className="absolute inset-0 rounded-2xl border-2 border-primary/0 group-hover:border-primary/40 transition-colors duration-200" />
         </div>
       </div>
     );
   }
 
-  // List Variant
+  // Diseño para jugador en la lista del banco
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
       {...listeners}
+      {...attributes}
       className={`
-        flex items-center gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm 
-        hover:border-primary/50 cursor-grab active:cursor-grabbing transition-all
-        ${player.status === 'assigned' ? 'opacity-50 grayscale pointer-events-none' : ''}
-        ${isDragging ? 'opacity-80 ring-2 ring-primary rotate-2' : ''}
+        group relative
+        w-full
+        ${isDragging ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
+        ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}
+        transition-all duration-200
       `}
     >
-      <div className="bg-muted p-1.5 rounded-full">
-         <GripVertical size={16} className="text-muted-foreground" />
-      </div>
-      
-      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border border-border shrink-0">
-        {player.image ? (
-            <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+      <div className={`
+        relative flex items-center gap-3 p-3 rounded-xl
+        bg-card border border-border/50
+        hover:border-primary/30 hover:bg-card/80
+        transition-all duration-200
+        ${isAssigned ? 'bg-muted/50' : 'hover:shadow-md'}
+      `}>
+        {/* Avatar */}
+        <div className={`
+          w-11 h-11 rounded-xl flex items-center justify-center
+          ${isAssigned 
+            ? 'bg-muted text-muted-foreground' 
+            : 'bg-gradient-to-br from-primary to-primary/80 text-white'
+          }
+          font-black text-sm shadow-sm shrink-0
+        `}>
+          {player.identification.slice(-2)}
+        </div>
+
+        {/* Info del jugador */}
+        <div className="flex-1 min-w-0">
+          <div className={`
+            text-sm font-bold truncate
+            ${isAssigned ? 'text-muted-foreground' : 'text-foreground'}
+          `}>
+            {player.name}
+          </div>
+          <div className="text-xs text-muted-foreground font-medium">
+            ID: {player.identification}
+          </div>
+        </div>
+
+        {/* Indicador de estado */}
+        {isAssigned ? (
+          <div className="shrink-0 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20">
+            <span className="text-[10px] font-bold text-primary uppercase">Asignado</span>
+          </div>
         ) : (
-            <User size={20} className="text-primary" />
+          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-5 h-5 text-muted-foreground" />
+          </div>
         )}
-      </div>
-      
-      <div className="min-w-0 flex-1">
-        <p className="font-medium text-sm truncate">{player.name}</p>
-        <p className="text-xs text-muted-foreground truncate">{player.position || 'Sin Pos.'}</p>
       </div>
     </div>
   );
 }
+
+export default DraggablePlayer;

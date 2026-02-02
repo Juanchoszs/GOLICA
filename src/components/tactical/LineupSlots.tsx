@@ -14,9 +14,13 @@ export function LineupSlots({ positions, assignments, getPlayer }: LineupSlotsPr
       {positions.map((pos) => {
         const assignedPlayerId = assignments[pos.id];
         const assignedPlayer = assignedPlayerId ? getPlayer(assignedPlayerId) : null;
-
+        
         return (
-          <DropZone key={pos.id} position={pos} assignedPlayer={assignedPlayer} />
+          <DropZone 
+            key={pos.id} 
+            position={pos} 
+            assignedPlayer={assignedPlayer || null} 
+          />
         );
       })}
     </>

@@ -20,6 +20,7 @@ export interface Position {
 export interface Lineup {
   id: string;
   name: string; // e.g. '4-3-3', '4-4-2'
+  description: string;
   positions: Position[];
 }
 
