@@ -36,7 +36,7 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
     tournaments: player.tournaments || [],
   });
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Image editing state
   const [editingImage, setEditingImage] = useState<{ url: string, field: string } | null>(null);
 
@@ -93,8 +93,9 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
 
     const toastId = toast.loading('Subiendo imagen editada...');
     try {
-      const bucketName = editingImage.field === 'photo_url' ? 'player-photos' : 'player-documents';
-      
+      // Use 'player-documents' for all items since 'player-photos' bucket specific doesn't exist yet
+      const bucketName = 'player-documents';
+
       // 1. Delete old image if it exists
       const oldUrl = editedPlayer[editingImage.field];
       if (oldUrl && oldUrl.includes(bucketName)) {
@@ -113,7 +114,10 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
       }
 
       // 2. Upload new image
-      const fileName = `${player.id}/${editingImage.field}_${Date.now()}.jpg`;
+      // Organize photos in a 'photos' folder within the bucket if desired, or just by ID
+      const folder = editingImage.field === 'photo_url' ? 'photos' : 'documents';
+      const fileName = `${player.id}/${folder}/${editingImage.field}_${Date.now()}.jpg`;
+
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, blob, {
@@ -131,12 +135,12 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
         ...editedPlayer,
         [editingImage.field]: publicUrl
       });
-      
+
       setEditingImage(null);
       toast.success('Imagen actualizada localmente. No olvides guardar los cambios del perfil.', { id: toastId });
     } catch (error) {
       console.error('Error uploading edited image:', error);
-      toast.error('Error al subir la imagen editada', { id: toastId });
+      toast.error('Error al subir la imagen editada. Verifique que el bucket "player-documents" exista.', { id: toastId });
     }
   };
 
@@ -153,7 +157,7 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
 
   if (editingImage) {
     return (
-      <ImageEditor 
+      <ImageEditor
         image={editingImage.url}
         onSave={handleUpdateImage}
         onCancel={() => setEditingImage(null)}

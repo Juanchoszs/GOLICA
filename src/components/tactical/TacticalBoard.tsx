@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { 
-  DndContext, 
-  DragOverlay, 
-  useSensor, 
-  useSensors, 
-  MouseSensor, 
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  MouseSensor,
   TouchSensor,
   DragStartEvent,
   DragEndEvent,
@@ -44,14 +44,14 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
     })
   );
 
-  const currentLineup = useMemo(() => 
+  const currentLineup = useMemo(() =>
     FORMATIONS.find(l => l.id === selectedLineupId) || FORMATIONS[0]
-  , [selectedLineupId]);
+    , [selectedLineupId]);
 
   const assignedPlayerIds = useMemo(() => Object.values(assignments), [assignments]);
-  
+
   const filteredPlayers = useMemo(() => {
-    return players.filter(p => 
+    return players.filter(p =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.identification.includes(searchTerm)
     );
@@ -88,7 +88,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
     setAssignments(prev => {
       const next = { ...prev };
-      
+
       if (prevPosId) {
         delete next[prevPosId];
       }
@@ -107,7 +107,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
   const handleLineupChange = (val: string) => {
     if (Object.keys(assignments).length > 0) {
-      if(!confirm('Cambiar la alineación reseteará las posiciones. ¿Continuar?')) return;
+      if (!confirm('Cambiar la alineación reseteará las posiciones. ¿Continuar?')) return;
       setAssignments({});
     }
     setSelectedLineupId(val);
@@ -119,7 +119,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       toast.error('¡Falta el Portero (GK)! 🛡️');
       return;
     }
-    
+
     const assignedCount = Object.keys(assignments).length;
     if (assignedCount < 11) {
       toast.error(`¡Equipo incompleto! Faltan ${11 - assignedCount} jugadores. ⚽`);
@@ -142,25 +142,25 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
     const defenders = currentLineup.positions.filter(p => p.role === 'Defensa').length;
     const midfielders = currentLineup.positions.filter(p => p.role === 'Mediocampo').length;
     const attackers = currentLineup.positions.filter(p => p.role === 'Delantero').length;
-    
+
     return { defenders, midfielders, attackers };
   }, [currentLineup]);
 
   return (
-    <DndContext 
-      sensors={sensors} 
-      onDragStart={handleDragStart} 
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-col h-screen max-h-screen bg-gradient-to-br from-background via-background to-muted/20 overflow-hidden">
-        
+      <div className="flex flex-col min-h-screen lg:h-screen lg:max-h-screen bg-gradient-to-br from-background via-background to-muted/20 lg:overflow-hidden">
+
         {/* Header Profesional */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-border/50 bg-card/80 backdrop-blur-xl shadow-lg z-50">
           <div className="flex items-center gap-6">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onClose} 
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
               className="hover:bg-primary/10 hover:text-primary transition-all duration-200 rounded-xl"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -175,28 +175,27 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
           <div className="flex items-center gap-4">
             <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-2xl border border-border/50 shadow-sm">
-              <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                Object.keys(assignments).length === 11 
-                  ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)] animate-pulse' 
-                  : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
-              }`} />
+              <div className={`w-3 h-3 rounded-full transition-all duration-300 ${Object.keys(assignments).length === 11
+                ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)] animate-pulse'
+                : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                }`} />
               <div className="text-center">
                 <div className="text-2xl font-black leading-none">{Object.keys(assignments).length}</div>
                 <div className="text-[9px] font-bold uppercase text-muted-foreground tracking-wider">/ 11 Jugadores</div>
               </div>
             </div>
-            
-            <Button 
-              variant="outline" 
-              onClick={handleReset} 
+
+            <Button
+              variant="outline"
+              onClick={handleReset}
               className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all duration-200 border-dashed rounded-xl"
             >
               <RotateCcw size={16} className="mr-2" />
               Resetear
             </Button>
-            
-            <Button 
-              onClick={handleSaveWrapper} 
+
+            <Button
+              onClick={handleSaveWrapper}
               className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 font-bold px-8 py-2.5 rounded-xl transition-all duration-200"
             >
               <Save size={16} className="mr-2" />
@@ -206,12 +205,12 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
         </div>
 
         {/* Contenido Principal */}
-        <div className="flex-1 flex overflow-hidden">
-          
+        <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden pb-20 lg:pb-0">
+
           {/* Panel Izquierdo: Configuración Táctica */}
           <aside className="w-80 hidden xl:flex flex-col p-8 border-r border-border/50 bg-card/30 backdrop-blur-sm overflow-y-auto">
             <div className="space-y-8">
-              
+
               {/* Selector de Formación */}
               <section className="space-y-4">
                 <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
@@ -233,7 +232,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
                     ))}
                   </SelectContent>
                 </Select>
-                
+
                 {/* Descripción de la formación */}
                 <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
                   <p className="text-xs text-muted-foreground leading-relaxed">
@@ -319,18 +318,18 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
           <section className="flex-1 bg-gradient-to-b from-muted/20 to-muted/40 p-6 md:p-12 flex items-center justify-center overflow-auto">
             <div className="w-full h-full max-w-5xl flex items-center justify-center">
               <SoccerPitch key={selectedLineupId}>
-                <LineupSlots 
-                  positions={currentLineup.positions} 
-                  assignments={assignments} 
-                  getPlayer={getPlayer} 
+                <LineupSlots
+                  positions={currentLineup.positions}
+                  assignments={assignments}
+                  getPlayer={getPlayer}
                 />
               </SoccerPitch>
             </div>
           </section>
 
           {/* Panel Derecho: Selección de Jugadores */}
-          <BenchPlayers 
-            players={players} 
+          <BenchPlayers
+            players={players}
             filteredPlayers={filteredPlayers}
             searchTerm={searchTerm}
             onSearchChange={v => setSearchTerm(v)}
@@ -338,7 +337,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
           />
         </div>
       </div>
-      
+
       {/* Overlay de Arrastre */}
       <DragOverlay>
         {activeId && draggedPlayer ? (

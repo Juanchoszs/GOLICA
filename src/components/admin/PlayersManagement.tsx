@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
-import { Plus, Search, User, Edit, Eye } from 'lucide-react';
+import { Plus, Search, User, Edit, Eye, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 import { PlayerDetails } from './PlayerDetails';
@@ -39,6 +39,7 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     loadPlayers();
@@ -93,14 +94,49 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+  const handleDeletePlayer = async (playerId: string, playerName: string) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar a ${playerName}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    setIsDeleting(playerId);
+    const toastId = toast.loading('Eliminando jugador...');
+
+    try {
+      // 1. Delete actual player record (Database)
+      const { error } = await supabase
+        .from('players')
+        .delete()
+        .eq('id', playerId);
+
+      if (error) throw error;
+
+      // 2. Attempt to cleanup storage (Optional/Best Effort)
+      // We don't block UI on this, just fire and forget or log errors
+      const cleanupStorage = async () => {
+        try {
+          const { data: files } = await supabase.storage.from('player-documents').list(`${playerId}/`);
+          if (files && files.length > 0) {
+            const paths = files.map(f => `${playerId}/${f.name}`);
+            await supabase.storage.from('player-documents').remove(paths);
+          }
+        } catch (e) {
+          console.error('Storage cleanup warning:', e);
+        }
+      };
+      cleanupStorage();
+
+      toast.success('Jugador eliminado correctamente', { id: toastId });
+
+      // Update local state
+      setPlayers(prev => prev.filter(p => p.id !== playerId));
+
+    } catch (error) {
+      console.error('Error deleting player:', error);
+      toast.error('Error al eliminar el jugador', { id: toastId });
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   const calculateAge = (birthDate: string) => {
@@ -332,6 +368,15 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
                   >
                     <Edit size={16} className="mr-1" />
                     Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="w-10 px-0 flex items-center justify-center bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                    onClick={() => handleDeletePlayer(player.id, player.name)}
+                    disabled={isDeleting === player.id}
+                  >
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               </Card>

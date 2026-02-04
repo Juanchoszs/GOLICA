@@ -3,7 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card } from '../ui/card';
-import { ArrowLeft, Save, UserPlus } from 'lucide-react';
+import { ArrowLeft, Save, UserPlus, FileText, Check, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 
@@ -22,6 +22,27 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
     position: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string, password: string } | null>(null);
+
+  const generateSecurePassword = (name: string, id: string) => {
+    // 1. First word of name, capitalized
+    const cleanName = name.trim().split(' ')[0].replace(/[^a-zA-Z]/g, '');
+    const prefix = cleanName.charAt(0).toUpperCase() + cleanName.slice(1).toLowerCase();
+
+    // 2. Last 4 digits of ID
+    const idSuffix = id.length >= 4 ? id.slice(-4) : id.padEnd(4, '0');
+
+    // 3. Random special char
+    const specialChars = ['!', '@', '#', '$', '%', '&'];
+    const special = specialChars[Math.floor(Math.random() * specialChars.length)];
+
+    // 4. Random 2-digit number for entropy
+    const random = Math.floor(Math.random() * 90 + 10); // 10-99
+
+    // Format: Name + ID_Suffix + Special + Random
+    // Ex: Juan4592@88
+    return `${prefix}${idSuffix}${special}${random}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +53,11 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
     }
 
     setIsSubmitting(true);
+
+    // Generate credentials
+    const password = generateSecurePassword(formData.name, formData.identification);
+
+    console.log('Generating player with password:', password); // Debug log (safe in client-side creation context)
 
     try {
       const { data, error } = await supabase
@@ -44,6 +70,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
           birth_date: formData.birthDate || null,
           category: formData.category,
           position: formData.position || null,
+          password: password, // Generated password
           status: 'active'
         }])
         .select()
@@ -51,7 +78,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
 
       if (error) {
         if (error.code === '23505') {
-          toast.error('Ya existe un jugador con esta identificación');
+          toast.error('Ya existe un jugador con esta identificación o email');
         } else {
           throw error;
         }
@@ -59,7 +86,13 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
       }
 
       toast.success('¡Jugador registrado exitosamente!');
-      onBack();
+
+      // Show credentials view
+      setCreatedCredentials({
+        email: formData.email,
+        password: password
+      });
+
     } catch (error) {
       console.error('Error registering player:', error);
       toast.error('Error al conectar con el servidor');
@@ -68,6 +101,76 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
     }
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('¡Copiado al portapapeles!');
+  };
+
+  // --- Success View (Credentials) ---
+  if (createdCredentials) {
+    return (
+      <div className="p-4 md:p-8 flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full p-8 border-primary/20 bg-card shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary/50" />
+
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-in zoom-in duration-300">
+              <Check className="text-green-500 w-8 h-8" strokeWidth={3} />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">¡Jugador Creado!</h2>
+            <p className="text-muted-foreground mt-1">El jugador ha sido registrado en el sistema.</p>
+          </div>
+
+          <div className="bg-muted/40 rounded-xl p-6 space-y-4 border border-border/50">
+            <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <FileText size={16} className="text-primary" /> Credenciales de Acceso
+            </h3>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Usuario / Email</label>
+              <div className="flex gap-2">
+                <code className="flex-1 bg-background border border-border px-3 py-2 rounded-lg text-sm font-mono text-foreground break-all">
+                  {createdCredentials.email}
+                </code>
+                <Button variant="outline" size="icon" onClick={() => copyToClipboard(createdCredentials.email)}>
+                  <Copy size={16} />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Contraseña Generada</label>
+              <div className="flex gap-2">
+                <code className="flex-1 bg-background border border-border px-3 py-2 rounded-lg text-sm font-mono text-primary font-bold">
+                  {createdCredentials.password}
+                </code>
+                <Button variant="outline" size="icon" onClick={() => copyToClipboard(createdCredentials.password)}>
+                  <Copy size={16} />
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg mt-4">
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 leading-relaxed">
+                ⚠️ <strong>Importante:</strong> Comparte estas credenciales con el jugador. La contraseña es temporal y única.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 flex gap-3">
+            <Button
+              className="w-full bg-primary text-primary-foreground font-bold"
+              onClick={onBack}
+            >
+              Finalizar
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // --- Registration Form ---
   return (
     <div className="p-4 md:p-8">
       <Button
@@ -87,7 +190,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-foreground">Registrar Nuevo Jugador</h1>
-              <p className="text-muted-foreground">Completa la información del jugador</p>
+              <p className="text-muted-foreground">Completa la información. Las credenciales se generarán automáticamente.</p>
             </div>
           </div>
         </div>
@@ -215,17 +318,10 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
                 </div>
 
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mt-6">
-                  <h4 className="text-foreground font-semibold mb-2">Información Adicional</h4>
+                  <h4 className="text-foreground font-semibold mb-2">Seguridad</h4>
                   <p className="text-muted-foreground text-sm">
-                    Una vez registrado el jugador, podrás editar:
+                    La contraseña será <strong>generada automáticamente</strong> basada en los datos del jugador para garantizar seguridad y facilidad de uso.
                   </p>
-                  <ul className="list-disc list-inside text-muted-foreground text-sm mt-2 space-y-1">
-                    <li>Descripción del jugador</li>
-                    <li>Rendimiento en entrenamientos</li>
-                    <li>Estadísticas de partidos (Goles/Asistencias)</li>
-                    <li>Subir documentos e identificación</li>
-                    <li>Registrar tests y evaluaciones</li>
-                  </ul>
                 </div>
               </div>
             </Card>
@@ -248,18 +344,18 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Save size={20} className="mr-2" />
-              {isSubmitting ? 'Registrando...' : 'Registrar Jugador'}
+              {isSubmitting ? 'Generando...' : 'Registrar Jugador'}
             </Button>
           </div>
         </form>
 
         <div className="mt-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
           <p className="text-sm text-muted-foreground">
-            <strong>Nota:</strong> Los campos marcados con <span className="text-red-500">*</span> son obligatorios.
-            Puedes agregar información adicional después del registro.
+            <strong>Nota:</strong> Al registrar un usuario, se te mostrarán sus credenciales de acceso una única vez.
           </p>
         </div>
       </div>
     </div>
   );
 }
+

@@ -46,9 +46,8 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-0 md:w-20'
-        } transition-all duration-300 bg-card border-r border-border flex flex-col`}
+        className={`${sidebarOpen ? 'w-64' : 'w-0 md:w-20'
+          } transition-all duration-300 bg-card border-r border-border flex flex-col overflow-hidden`}
       >
         {/* Logo & Header */}
         <div className="p-4 border-b border-border">
@@ -93,11 +92,10 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
               <Button
                 key={item.id}
                 variant={activeSection === item.id ? 'default' : 'ghost'}
-                className={`w-full justify-start ${
-                  activeSection === item.id
+                className={`w-full justify-start ${activeSection === item.id
                     ? 'bg-primary text-primary-foreground'
                     : 'text-foreground hover:bg-muted'
-                } ${!item.available ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  } ${!item.available ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => item.available && setActiveSection(item.id)}
                 disabled={!item.available}
               >

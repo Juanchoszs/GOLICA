@@ -70,7 +70,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         .eq('identification', loginData.identification)
         .eq('password', loginData.password)
         .maybeSingle();
-      
+
       if (coachError) console.error('Coach login error:', coachError);
 
       if (coach) {
@@ -192,28 +192,22 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           <div className="order-1 lg:order-2">
             <Card className="bg-card border-border p-8">
               <Tabs defaultValue="player" className="w-full">
-                  <TabsList className="flex w-full mb-8 bg-muted/30 p-1">
-                    <TabsTrigger
-                      value="player"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                    >
-                      Jugador
-                    </TabsTrigger>
+                <TabsList className="flex w-full mb-8 bg-muted/30 p-1">
+                  <TabsTrigger
+                    value="player"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
+                  >
+                    Jugador
+                  </TabsTrigger>
 
-                    <TabsTrigger
-                      value="admin"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                    >
-                      <Shield size={14} className="mr-1 hidden sm:inline" />
-                      Admin
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="register"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                    >
-                      Registro
-                    </TabsTrigger>
-                  </TabsList>
+                  <TabsTrigger
+                    value="admin"
+                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
+                  >
+                    <Shield size={14} className="mr-1 hidden sm:inline" />
+                    Admin
+                  </TabsTrigger>
+                </TabsList>
 
                 {/* Player Login Form */}
                 <TabsContent value="player">
@@ -229,7 +223,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                         .select('*')
                         .eq('email', email)
                         .eq('password', password)
-                        .single();
+                        .maybeSingle();
 
                       if (error || !player) {
                         toast.error('Credenciales incorrectas');
@@ -345,138 +339,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {isLoading ? 'Verificando...' : 'Acceder al Panel'}
-                    </Button>
-                  </form>
-                </TabsContent>
-
-                {/* Register Form */}
-                <TabsContent value="register">
-                  <form onSubmit={handleRegister} className="space-y-6">
-                    <div>
-                      <Label htmlFor="register-name" className="text-foreground flex items-center gap-2">
-                        <User size={16} />
-                        Nombre Completo *
-                      </Label>
-                      <Input
-                        id="register-name"
-                        value={registerData.name}
-                        onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                        required
-                        placeholder="Juan Pérez"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="register-identification" className="text-foreground flex items-center gap-2">
-                        <Shield size={16} />
-                        Identificación *
-                      </Label>
-                      <Input
-                        id="register-identification"
-                        value={registerData.identification}
-                        onChange={(e) => setRegisterData({ ...registerData, identification: e.target.value })}
-                        required
-                        placeholder="123456789"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="register-email" className="text-foreground flex items-center gap-2">
-                        <Mail size={16} />
-                        Email *
-                      </Label>
-                      <Input
-                        id="register-email"
-                        type="email"
-                        value={registerData.email}
-                        onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                        required
-                        placeholder="tu@email.com"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="register-phone" className="text-foreground flex items-center gap-2">
-                          <Phone size={16} />
-                          Teléfono *
-                        </Label>
-                        <Input
-                          id="register-phone"
-                          type="tel"
-                          value={registerData.phone}
-                          onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                          required
-                          placeholder="+57 301 234 5678"
-                          className="bg-input-background border-border text-foreground"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="register-birthdate" className="text-foreground flex items-center gap-2">
-                          <Calendar size={16} />
-                          Fecha Nacimiento
-                        </Label>
-                        <Input
-                          id="register-birthdate"
-                          type="date"
-                          value={registerData.birthdate}
-                          onChange={(e) => setRegisterData({ ...registerData, birthdate: e.target.value })}
-                          className="bg-input-background border-border text-foreground"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="register-password" className="text-foreground flex items-center gap-2">
-                        <Lock size={16} />
-                        Contraseña *
-                      </Label>
-                      <Input
-                        id="register-password"
-                        type="password"
-                        value={registerData.password}
-                        onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                        required
-                        placeholder="Mínimo 8 caracteres"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="register-confirm-password" className="text-foreground flex items-center gap-2">
-                        <Lock size={16} />
-                        Confirmar Contraseña *
-                      </Label>
-                      <Input
-                        id="register-confirm-password"
-                        type="password"
-                        value={registerData.confirmPassword}
-                        onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                        required
-                        placeholder="Repite tu contraseña"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div className="flex items-start gap-2">
-                      <input type="checkbox" required className="rounded border-border mt-1" />
-                      <span className="text-muted-foreground text-sm">
-                        Acepto los{' '}
-                        <a href="#" className="text-primary hover:text-primary/80">
-                          términos y condiciones
-                        </a>{' '}
-                        y la{' '}
-                        <a href="#" className="text-primary hover:text-primary/80">
-                          política de privacidad
-                        </a>
-                      </span>
-                    </div>
-
-                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                      Crear Cuenta
                     </Button>
                   </form>
                 </TabsContent>

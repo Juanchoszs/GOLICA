@@ -324,7 +324,7 @@ export function Convocatoria({ coach }: { coach: any }) {
 
   return (
     <DndContext onDragEnd={handleDragEnd} onDragStart={(e: any) => setDraggedPlayer(e.active.data.current.player)}>
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-140px)]">
+      <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-140px)] lg:h-[calc(100vh-140px)] pb-10 lg:pb-0">
         
         {/* Left: Field & Controls */}
         <div className="flex-1 flex flex-col gap-4 min-h-0">
