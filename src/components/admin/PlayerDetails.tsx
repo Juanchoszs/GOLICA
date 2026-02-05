@@ -18,9 +18,10 @@ interface PlayerDetailsProps {
   player: any;
   onBack: () => void;
   user: any;
+  isEmbedded?: boolean;
 }
 
-export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
+export function PlayerDetails({ player, onBack, user, isEmbedded = false }: PlayerDetailsProps) {
   const [editedPlayer, setEditedPlayer] = useState({
     ...player,
     description: player.description || '',
@@ -79,7 +80,8 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
       if (error) throw error;
 
       toast.success('Información actualizada correctamente');
-      onBack();
+      // Only call onBack if not embedded, or refresh list if needed
+      if (!isEmbedded) onBack();
     } catch (error) {
       console.error('Error updating player:', error);
       toast.error('Error al actualizar la información');
@@ -167,17 +169,19 @@ export function PlayerDetails({ player, onBack, user }: PlayerDetailsProps) {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className={`p-4 md:p-8 ${isEmbedded ? 'h-full overflow-y-auto' : ''}`}>
       {/* Header */}
       <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          className="mb-4 text-foreground hover:bg-muted"
-        >
-          <ArrowLeft size={20} className="mr-2" />
-          Volver a la lista
-        </Button>
+        {!isEmbedded && (
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="mb-4 text-foreground hover:bg-muted"
+          >
+            <ArrowLeft size={20} className="mr-2" />
+            Volver a la lista
+          </Button>
+        )}
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">

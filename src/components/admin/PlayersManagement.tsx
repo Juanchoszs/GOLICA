@@ -20,6 +20,7 @@ interface Player {
   description?: string;
   status: string;
   registeredAt: string;
+  photo_url?: string;
   performance?: {
     training: number;
     matchGoals: number;
@@ -45,7 +46,7 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
     loadPlayers();
   }, []);
 
-  const categories = ['Todas', 'Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23', 'Profesional'];
+  const categories = ['Todas', 'Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'];
 
   useEffect(() => {
     let filtered = players;
@@ -295,8 +296,21 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
                 className="bg-card border-border p-6 hover:border-primary/50 transition-colors"
               >
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-primary/20 border border-primary/30 rounded-full flex items-center justify-center">
-                    <span className="text-primary font-bold text-lg">
+                  <div className="w-12 h-12 bg-primary/20 border-2 border-primary/30 rounded-full flex items-center justify-center overflow-hidden">
+                    {player.photo_url ? (
+                      <img 
+                        src={player.photo_url} 
+                        alt={player.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling as HTMLElement;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <span className={`text-primary font-bold text-lg ${player.photo_url ? 'hidden' : 'flex'}`}>
                       {player.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                     </span>
                   </div>

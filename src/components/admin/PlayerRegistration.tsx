@@ -276,7 +276,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
                     Categorías <span className="text-red-500">*</span> (Selecciona una o varias)
                   </Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    {['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23', 'Profesional'].map(cat => (
+                    {['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'].map(cat => (
                       <label key={cat} className="flex items-center gap-2 p-2 border border-border rounded-md hover:bg-muted/50 cursor-pointer">
                         <input
                           type="checkbox"

@@ -15,7 +15,7 @@ export function PerformanceTab({ editedPlayer, setEditedPlayer }: PerformanceTab
       <Card className="bg-card border-border p-6">
         <h3 className="text-foreground text-xl font-semibold mb-4 flex items-center gap-2">
           <Activity className="text-primary" size={24} />
-          Rendimiento en Entrenamientos
+          Rendimiento General
         </h3>
         <div className="space-y-4">
           <div>

@@ -1,31 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Label } from './ui/label';
 import { useTheme } from './ThemeContext';
 import {
     User,
+    Users,
     Trophy,
     Activity,
-    FileText,
-    Heart,
-    TrendingUp,
     LogOut,
     Calendar,
     Phone,
     Mail,
     Shield,
-    Upload,
     Clock,
-    CheckCircle2,
-    Users,
     Sun,
     Moon,
-    Camera as CameraIcon
+    Menu,
+    X,
+    ChevronRight,
+    MapPin,
+    Shirt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
-import { CameraCapture } from './ui/CameraCapture';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface PlayerPortalProps {
     user: any;
@@ -34,352 +32,461 @@ interface PlayerPortalProps {
 
 export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
     const [playerData, setPlayerData] = useState<any>(user);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const [showCamera, setShowCamera] = useState<{ side: 'front' | 'back' } | null>(null);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile state
     const { theme, toggleTheme } = useTheme();
+    const [convocatorias, setConvocatorias] = useState<any[]>([]);
 
+    // Data Fetching & Sync
     useEffect(() => {
-        const fetchPlayerData = async () => {
-            const { data, error } = await supabase
+        const fetchAllData = async () => {
+            // Player Data
+            const { data: pData } = await supabase
                 .from('players')
                 .select('*')
                 .eq('id', user.id)
                 .single();
+            if (pData) setPlayerData(pData);
 
-            if (data) {
-                setPlayerData(data);
+            // Convocatorias - Filtrar por categoría del jugador
+            const { data: cData } = await supabase
+                .from('convocatorias')
+                .select('*')
+                .order('date', { ascending: false });
+
+            if (cData && pData) {
+                const playerCategory = pData.category || '';
+                const myConvs = cData.filter((c: any) => {
+                    // Verificar si el jugador está en la lista de jugadores de la convocatoria
+                    const isInPlayers = Array.isArray(c.players) && c.players.some((p: any) => p.id === user.id);
+                    // Verificar si la categoría de la convocatoria coincide con la del jugador
+                    const categoryMatch = !c.category || !playerCategory || 
+                        (typeof c.category === 'string' && playerCategory.includes(c.category)) ||
+                        (typeof playerCategory === 'string' && c.category.includes(playerCategory));
+                    return isInPlayers && categoryMatch;
+                });
+                setConvocatorias(myConvs);
             }
         };
-        fetchPlayerData();
+
+        fetchAllData();
+
+        // Focus Revalidation
+        const handleFocus = () => {
+            console.log('Refreshing data...');
+            fetchAllData();
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, [user.id]);
-
-    const handleFileUpload = async (file: File | Blob, side: 'front' | 'back') => {
-        console.log(`--- Iniciando subida de archivo (${side}) ---`);
-        
-        if (!playerData?.id) {
-            console.error('Error: ID de jugador no encontrado');
-            toast.error('Error interno: No se pudo identificar al jugador');
-            return;
-        }
-
-        const dbColumn = side === 'front' ? 'id_card_front_url' : 'id_card_back_url';
-        const oldUrl = playerData[dbColumn];
-
-        setIsUploading(true);
-        try {
-            // 1. Delete old image if it exists
-            if (oldUrl && oldUrl.includes('player-documents')) {
-                try {
-                    const pathParts = oldUrl.split('player-documents/')[1];
-                    if (pathParts) {
-                        const oldFilePath = pathParts.split('?')[0];
-                        await supabase.storage
-                            .from('player-documents')
-                            .remove([oldFilePath]);
-                        console.log(`Imagen antigua eliminada: ${oldFilePath}`);
-                    }
-                } catch (delError) {
-                    console.error('Error al eliminar imagen antigua:', delError);
-                }
-            }
-
-            // 2. Upload new image
-            const fileName = file instanceof File ? file.name : `capture_${side}.jpg`;
-            const fileExt = fileName.split('.').pop() || 'jpg';
-            const filePath = `${playerData.id}/id_card_${side}_${Date.now()}.${fileExt}`;
-
-            console.log(`Subiendo a storage: ${filePath}...`);
-            const { error: uploadError } = await supabase.storage
-                .from('player-documents')
-                .upload(filePath, file, { upsert: true });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('player-documents')
-                .getPublicUrl(filePath);
-
-            console.log(`Actualizando DB columna ${dbColumn}...`);
-            const { error: updateError } = await supabase
-                .from('players')
-                .update({ [dbColumn]: publicUrl })
-                .eq('id', playerData.id);
-
-            if (updateError) throw updateError;
-
-            setPlayerData({ ...playerData, [dbColumn]: publicUrl });
-            toast.success(`Tarjeta (${side === 'front' ? 'frente' : 'dorso'}) subida correctamente`);
-            setShowCamera(null);
-        } catch (error: any) {
-            console.error('ERROR EN SUBIDA:', error);
-            toast.error(`Error al subir: ${error.message}`);
-        } finally {
-            setIsUploading(false);
-            console.log('--- Proceso terminado ---');
-        }
-    };
 
     const performance = playerData.performance || { training: 0, matchGoals: 0, matchAssists: 0 };
 
+    // Navigation Items
+    const navItems = [
+        { id: 'overview', label: 'Resumen', icon: Activity },
+        { id: 'convocatorias', label: 'Convocatorias', icon: Calendar },
+        { id: 'stats', label: 'Rendimiento', icon: Trophy },
+        { id: 'profile', label: 'Mi Perfil', icon: User },
+    ];
+
+    const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* Header Portal */}
-            <header className="bg-card border-b border-border sticky top-0 z-30">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/20">
+            {/* Mobile Overlay */}
+            <AnimatePresence>
+                {isSidebarOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={toggleSidebar}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Sidebar (Desktop & Mobile) */}
+            <motion.aside
+                className={`
+                    fixed md:relative z-50 h-full w-72 bg-card/95 backdrop-blur-xl border-r border-border flex flex-col shadow-2xl
+                    md:translate-x-0 transition-transform duration-300 ease-in-out
+                    ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+                `}
+            >
+                {/* Brand */}
+                <div className="p-8 pb-4 flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/20 border border-primary/30 rounded-full flex items-center justify-center">
-                            <span className="text-primary font-bold">G</span>
+                        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                            <img src="/logo-white.png" className="w-6 h-6 object-contain invert grayscale brightness-200" alt="Logo" />
                         </div>
-                        <div>
-                            <h1 className="text-foreground font-bold leading-none">Mi Portal GOLICA</h1>
-                            <p className="text-muted-foreground text-xs">Hola, {playerData.name}</p>
-                        </div>
+                        <h1 className="text-xl font-bold tracking-tight">GOLICA <span className="text-primary">PRO</span></h1>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {/* Theme Toggle Button */}
-                        <button
-                            onClick={toggleTheme}
-                            className="w-10 h-10 rounded-full bg-primary/20 hover:bg-primary/30 border border-primary/30 flex items-center justify-center transition-all duration-300 hover:scale-110"
-                            aria-label="Cambiar tema"
-                        >
-                            {theme === 'dark' ? (
-                                <Sun className="w-5 h-5 text-primary" />
-                            ) : (
-                                <Moon className="w-5 h-5 text-primary" />
-                            )}
-                        </button>
-                        <Button variant="ghost" onClick={onLogout} className="text-destructive hover:bg-destructive/10">
-                            <LogOut size={18} className="mr-2" />
-                            <span className="hidden sm:inline">Cerrar Sesión</span>
-                        </Button>
+                    <button onClick={toggleSidebar} className="md:hidden p-1 hover:bg-muted rounded-full">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* User Card */}
+                <div className="px-6 py-4">
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/10 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full border-2 border-primary p-0.5">
+                            <img
+                                src={playerData.photo_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + playerData.name}
+                                className="w-full h-full rounded-full object-cover bg-background"
+                            />
+                        </div>
+                        <div className="min-w-0">
+                            <h3 className="font-bold text-sm truncate">{playerData.name.split(' ')[0]}</h3>
+                            <p className="text-xs text-muted-foreground truncate">{playerData.position || 'Jugador'}</p>
+                        </div>
                     </div>
                 </div>
-            </header>
 
-            <main className="container mx-auto px-4 mt-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Navigation */}
+                <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scrollbar">
+                    {navItems.map((item) => (
+                        <button
+                            key={item.id}
+                            onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
+                            className={`
+                                w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                                ${activeTab === item.id
+                                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
+                            `}
+                        >
+                            <item.icon size={18} />
+                            {item.label}
+                            {activeTab === item.id && <ChevronRight size={16} className="ml-auto opacity-50" />}
+                        </button>
+                    ))}
+                </nav>
 
-                    {/* Columna Izquierda - Perfil Rápido */}
-                    <div className="space-y-6">
-                        <Card className="bg-card border-border p-6 text-center">
-                            <div className="w-24 h-24 bg-primary/20 border-2 border-primary/30 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
-                                <User size={48} className="text-primary" />
-                            </div>
-                            <h2 className="text-xl font-bold text-foreground mb-1">{playerData.name}</h2>
-                            <p className="text-primary text-sm font-medium mb-4">{playerData.category || 'Categoría no asignada'}</p>
-
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                                <div>
-                                    <p className="text-muted-foreground text-xs uppercase tracking-wider">Identificación</p>
-                                    <p className="text-foreground font-semibold">{playerData.identification}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs uppercase tracking-wider">Posición</p>
-                                    <p className="text-foreground font-semibold">{playerData.position || 'N/A'}</p>
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="bg-card border-border p-6">
-                            <h3 className="text-foreground font-bold mb-4 flex items-center gap-2">
-                                <FileText size={18} className="text-primary" />
-                                Mis Documentos
-                            </h3>
-                            <p className="text-muted-foreground text-xs mb-4 text-pretty subrayado">Sube ambos lados de tu documento de identidad para completar tu ficha técnica.</p>
-                            
-                            <div className="space-y-4">
-                                {/* Front Side */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                                        <span>Frente de Identidad</span>
-                                        {playerData.id_card_front_url && <span className="text-green-500 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</span>}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button 
-                                            variant="outline" 
-                                            className="flex-1 h-12 border-dashed border-2 hover:border-primary hover:bg-primary/5 group"
-                                            onClick={() => setShowCamera({ side: 'front' })}
-                                            disabled={isUploading}
-                                        >
-                                            <CameraIcon size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
-                                            <span className="text-xs">Tomar Foto</span>
-                                        </Button>
-                                        <label className="flex-1 h-12 border-dashed border-2 rounded-md border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 group">
-                                            <input 
-                                                type="file" 
-                                                className="hidden" 
-                                                accept="image/*"
-                                                onChange={(e) => {
-                                                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'front');
-                                                }}
-                                                disabled={isUploading} 
-                                            />
-                                            <Upload size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
-                                            <span className="text-xs font-medium text-muted-foreground group-hover:text-primary">Elegir Archivo</span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* Back Side */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                                        <span>Dorso de Identidad</span>
-                                        {playerData.id_card_back_url && <span className="text-green-500 flex items-center gap-1"><CheckCircle2 size={12}/> Listo</span>}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button 
-                                            variant="outline" 
-                                            className="flex-1 h-12 border-dashed border-2 hover:border-primary hover:bg-primary/5 group"
-                                            onClick={() => setShowCamera({ side: 'back' })}
-                                            disabled={isUploading}
-                                        >
-                                            <CameraIcon size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
-                                            <span className="text-xs">Tomar Foto</span>
-                                        </Button>
-                                        <label className="flex-1 h-12 border-dashed border-2 rounded-md border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 group">
-                                            <input 
-                                                type="file" 
-                                                className="hidden" 
-                                                accept="image/*"
-                                                onChange={(e) => {
-                                                    if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'back');
-                                                }}
-                                                disabled={isUploading} 
-                                            />
-                                            <Upload size={18} className="mr-2 text-muted-foreground group-hover:text-primary" />
-                                            <span className="text-xs font-medium text-muted-foreground group-hover:text-primary">Elegir Archivo</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
+                {/* Footer Actions */}
+                <div className="p-6 border-t border-border mt-auto space-y-3">
+                    <div className="flex items-center justify-between px-2">
+                        <span className="text-xs font-medium text-muted-foreground">Tema</span>
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-full hover:bg-muted transition-colors"
+                        >
+                            {theme === 'dark' ? <Sun size={18} className="text-yellow-400" /> : <Moon size={18} className="text-slate-700" />}
+                        </button>
                     </div>
+                    <Button
+                        variant="outline"
+                        onClick={onLogout}
+                        className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
+                    >
+                        <LogOut size={18} className="mr-3" />
+                        Cerrar Sesión
+                    </Button>
+                </div>
+            </motion.aside>
 
-                    {/* Columna Central/Derecha - Pestañas de Información */}
-                    <div className="lg:col-span-2">
-                        <Tabs defaultValue="overview" className="w-full">
-                            <TabsList className="bg-muted/30 p-1 w-full flex overflow-x-auto h-auto no-scrollbar">
-                                <TabsTrigger value="overview" className="flex-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                                    <Trophy size={16} className="mr-2" /> General
-                                </TabsTrigger>
-                                <TabsTrigger value="rendimiento" className="flex-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                                    <Activity size={16} className="mr-2" /> Rendimiento
-                                </TabsTrigger>
-                                <TabsTrigger value="salud" className="flex-1 py-3 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                                    <Heart size={16} className="mr-2" /> Salud
-                                </TabsTrigger>
-                            </TabsList>
 
-                            {/* Vista General */}
-                            <TabsContent value="overview" className="mt-6 space-y-6">
-                                <Card className="bg-card border-border p-8">
-                                    <h3 className="text-foreground text-2xl font-bold mb-4" style={{ fontFamily: 'var(--font-display)' }}>Ficha Técnica</h3>
-                                    <p className="text-muted-foreground mb-6">Esta información es actualizada periódicamente por el cuerpo técnico.</p>
+            {/* Main Content */}
+            <main className="flex-1 h-full overflow-hidden flex flex-col relative bg-muted/5">
+                {/* Mobile Header */}
+                <div className="md:hidden p-4 flex items-center justify-between bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-30">
+                    <div className="flex items-center gap-3">
+                        <button onClick={toggleSidebar} className="p-2 -ml-2 hover:bg-muted rounded-full">
+                            <Menu size={24} />
+                        </button>
+                        <span className="font-bold text-lg">{navItems.find(i => i.id === activeTab)?.label}</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                        {playerData.name.charAt(0)}
+                    </div>
+                </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <div className="flex items-start gap-3">
-                                                <Calendar size={20} className="text-primary mt-1 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-muted-foreground text-xs">Fecha de Nacimiento</p>
-                                                    <p className="text-foreground font-medium">{playerData.birth_date || 'No registrada'}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start gap-3">
-                                                <Phone size={20} className="text-primary mt-1 flex-shrink-0" />
-                                                <div>
-                                                    <p className="text-muted-foreground text-xs">Contacto</p>
-                                                    <p className="text-foreground font-medium">{playerData.phone}</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-start gap-3">
-                                                <Mail size={20} className="text-primary mt-1 flex-shrink-0" />
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-muted-foreground text-xs">Email</p>
-                                                    <p className="text-foreground font-medium break-all">{playerData.email}</p>
-                                                </div>
-                                            </div>
+                {/* Scrollable Area */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+                    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+                        {/* VIEW: OVERVIEW */}
+                        {activeTab === 'overview' && (
+                            <>
+                                <header className="mb-8 hidden md:block">
+                                    <h1 className="text-3xl font-bold tracking-tight mb-2">Hola, {playerData.name.split(' ')[0]} 👋</h1>
+                                    <p className="text-muted-foreground">Aquí tienes el resumen de tu actividad deportiva.</p>
+                                </header>
+
+                                {/* Key Metrics Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            <Activity size={80} />
                                         </div>
-
-                                        <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">
-                                            <h4 className="text-primary font-bold mb-3 flex items-center gap-2">
-                                                <Shield size={18} />
-                                                Estado actual
-                                            </h4>
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`w-3 h-3 rounded-full ${playerData.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
-                                                <span className="text-foreground font-semibold uppercase">{playerData.status || 'Activo'}</span>
-                                            </div>
-                                            <p className="text-muted-foreground text-sm">
-                                                Registrado desde: {new Date(playerData.registered_at).toLocaleDateString()}
-                                            </p>
-                                        </div>
+                                        <p className="text-sm font-medium text-muted-foreground mb-1">Rendimiento General</p>
+                                        <h3 className="text-4xl font-bold text-blue-500">{performance.training}%</h3>
                                     </div>
-                                </Card>
-
-                                {/* Resumen de Estadísticas */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <Card className="bg-card border-border p-6 text-center">
-                                        <TrendingUp className="text-primary mx-auto mb-2" size={24} />
-                                        <p className="text-3xl font-bold text-foreground">{performance.training}%</p>
-                                        <p className="text-muted-foreground text-sm">Asistencia Entrenamientos</p>
-                                    </Card>
-                                    <Card className="bg-card border-border p-6 text-center">
-                                        <Trophy className="text-primary mx-auto mb-2" size={24} />
-                                        <p className="text-3xl font-bold text-foreground">{performance.matchGoals}</p>
-                                        <p className="text-muted-foreground text-sm">Goles Totales</p>
-                                    </Card>
-                                    <Card className="bg-card border-border p-6 text-center">
-                                        <Users className="text-primary mx-auto mb-2" size={24} />
-                                        <p className="text-3xl font-bold text-foreground">{performance.matchAssists}</p>
-                                        <p className="text-muted-foreground text-sm">Asistencias</p>
-                                    </Card>
+                                    <div className="p-6 rounded-2xl bg-card border border-border">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><Trophy size={20} /></div>
+                                            <span className="text-sm font-medium text-muted-foreground">Goles</span>
+                                        </div>
+                                        <p className="text-3xl font-bold">{performance.matchGoals}</p>
+                                    </div>
+                                    <div className="p-6 rounded-2xl bg-card border border-border">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500"><Users size={20} /></div>
+                                            <span className="text-sm font-medium text-muted-foreground">Asistencias</span>
+                                        </div>
+                                        <p className="text-3xl font-bold">{performance.matchAssists}</p>
+                                    </div>
+                                    <div className="p-6 rounded-2xl bg-card border border-border">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="p-2 bg-orange-500/10 rounded-lg text-orange-500"><Shirt size={20} /></div>
+                                            <span className="text-sm font-medium text-muted-foreground">Convocatorias</span>
+                                        </div>
+                                        <p className="text-3xl font-bold">{convocatorias.length}</p>
+                                    </div>
                                 </div>
-                            </TabsContent>
 
-                            {/* Vista Rendimiento */}
-                            <TabsContent value="rendimiento" className="mt-6">
-                                <Card className="bg-card border-border p-8 text-center py-20">
-                                    <TrendingUp size={48} className="text-primary mx-auto mb-4 opacity-50" />
-                                    <h3 className="text-xl font-bold mb-2">Seguimiento Técnico</h3>
-                                    <p className="text-muted-foreground max-w-md mx-auto">
-                                        Próximamente podrás ver aquí las gráficas de evolución, tests de velocidad y comentarios de tu entrenador.
-                                    </p>
-                                </Card>
-                            </TabsContent>
+                                {/* Next Match Card */}
+                                <h3 className="text-xl font-bold mt-8 mb-4">Próximo Partido</h3>
+                                {convocatorias.length > 0 ? (
+                                    <div className="relative rounded-3xl overflow-hidden min-h-[200px] flex items-center bg-black">
+                                        {/* Background Image/Gradient */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent z-10"></div>
+                                        <img src="https://images.unsplash.com/photo-1522778119026-d647f0565c6d?q=80&w=2070&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-50" />
 
-                            {/* Vista Salud */}
-                            <TabsContent value="salud" className="mt-6 space-y-6">
-                                <Card className="bg-card border-border p-8">
-                                    <h3 className="text-foreground font-bold mb-4 flex items-center gap-2">
-                                        <Heart size={20} className="text-red-500" />
-                                        Antecedentes y Lesiones
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <div className="flex gap-4 p-4 bg-muted/30 rounded-lg border-l-4 border-primary">
-                                            <Clock className="text-primary flex-shrink-0" size={20} />
-                                            <div>
-                                                <p className="text-foreground font-medium">Nota del fisioterapeuta</p>
-                                                <p className="text-muted-foreground text-sm">Actualmente sin lesiones registradas. Jugador apto para competencia de alta intensidad.</p>
+                                        <div className="relative z-20 p-8 w-full md:w-2/3">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider mb-4 border border-white/10">
+                                                <Calendar size={12} />
+                                                {new Date(convocatorias[0].date).toLocaleDateString()}
+                                            </div>
+                                            <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-2">VS {convocatorias[0].opponent}</h2>
+                                            <div className="flex items-center gap-6 text-white/80">
+                                                <span className="flex items-center gap-2">
+                                                    <Clock size={16} /> 
+                                                    {convocatorias[0].time || new Date(convocatorias[0].date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                {convocatorias[0].location && (
+                                                    <span className="flex items-center gap-2">
+                                                        <MapPin size={16} /> 
+                                                        {convocatorias[0].location}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="mt-6">
+                                                <span className={`px-4 py-2 rounded-lg font-bold text-sm ${convocatorias[0].players?.find((p: any) => p.id === user.id)?.isStarter
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'bg-yellow-500 text-black'
+                                                    }`}>
+                                                    {convocatorias[0].players?.find((p: any) => p.id === user.id)?.isStarter ? 'TITULAR' : 'SUPLENTE'}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
-                                </Card>
-                            </TabsContent>
-                        </Tabs>
+                                ) : (
+                                    <div className="p-8 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-center text-muted-foreground">
+                                        <Calendar size={48} className="mb-4 opacity-20" />
+                                        <p>No tienes partidos programados próximamente.</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* VIEW: CONVOCATORIAS */}
+                        {activeTab === 'convocatorias' && (
+                            <div className="space-y-6">
+                                <header>
+                                    <h2 className="text-2xl font-bold mb-2">Historial de Convocatorias</h2>
+                                    <p className="text-muted-foreground">Todos los partidos donde has sido seleccionado.</p>
+                                </header>
+                                <div className="grid gap-4">
+                                    {convocatorias.map((conv) => {
+                                        const isStarter = conv.players?.find((p: any) => p.id === user.id)?.isStarter;
+                                        return (
+                                            <div key={conv.id} className="group p-5 bg-card border border-border rounded-xl hover:border-primary/50 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div className="flex items-start gap-4">
+                                                    <div className="w-14 h-14 bg-muted rounded-xl flex items-center justify-center font-black text-2xl text-muted-foreground/30">
+                                                        VS
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">{conv.opponent}</h3>
+                                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                                                            <span className="flex items-center gap-1">
+                                                                <Calendar size={14} /> 
+                                                                {new Date(conv.date).toLocaleDateString()}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                                <Clock size={14} /> 
+                                                                {conv.time || new Date(conv.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                            {conv.location && (
+                                                                <span className="flex items-center gap-1">
+                                                                    <MapPin size={14} /> 
+                                                                    {conv.location}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`px-3 py-1 rounded-md text-xs font-bold uppercase ${isStarter ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                                                        {isStarter ? 'Titular' : 'Suplente'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {convocatorias.length === 0 && (
+                                        <div className="text-center py-20 text-muted-foreground">
+                                            No se encontraron registros.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* VIEW: STATS */}
+                        {activeTab === 'stats' && (
+                            <div className="space-y-6">
+                                <header>
+                                    <h2 className="text-2xl font-bold mb-2">Rendimiento</h2>
+                                    <p className="text-muted-foreground">Tu rendimiento general y estadísticas.</p>
+                                </header>
+                                
+                                {/* Card de Rendimiento General */}
+                                <div className="text-card-foreground flex flex-col gap-6 rounded-xl border bg-card border-border p-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Activity className="text-primary" size={24} />
+                                        <h3 className="text-xl font-semibold">Rendimiento General</h3>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium text-muted-foreground">Nivel de Rendimiento (%)</span>
+                                                <span className="text-2xl font-bold text-primary">
+                                                    {performance.training}%
+                                                </span>
+                                            </div>
+                                            <div className="h-3 bg-muted rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-primary transition-all"
+                                                    style={{ width: `${performance.training}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Estadísticas en Partidos */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="text-card-foreground flex flex-col gap-6 rounded-xl border bg-card border-border p-6">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <Trophy className="text-primary" size={24} />
+                                            <h3 className="text-xl font-semibold">Estadísticas</h3>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                                                <p className="text-muted-foreground text-sm mb-2">Resumen de Estadísticas</p>
+                                                <p className="text-foreground text-3xl font-bold">
+                                                    {performance.matchGoals}G / {performance.matchAssists}A
+                                                </p>
+                                                <p className="text-muted-foreground text-sm mt-1">
+                                                    Total de contribuciones:{' '}
+                                                    {(performance.matchGoals || 0) + (performance.matchAssists || 0)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* VIEW: PROFILE */}
+                        {activeTab === 'profile' && (
+                            <div className="space-y-6">
+                                <header>
+                                    <h2 className="text-2xl font-bold mb-2">Mi Perfil</h2>
+                                    <p className="text-muted-foreground">Información personal y de contacto.</p>
+                                </header>
+
+                                {/* Card de FICHA TÉCNICA */}
+                                <div className="text-card-foreground flex flex-col gap-6 rounded-xl border bg-card border-border p-6">
+                                    <h3 className="text-xl font-semibold mb-4">FICHA TÉCNICA</h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Foto y datos principales */}
+                                        <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+                                            <div className="relative group overflow-hidden shrink-0">
+                                                <div className="w-32 h-32 bg-primary/10 border-2 border-primary/20 rounded-full flex items-center justify-center overflow-hidden shadow-lg">
+                                                    {playerData.photo_url ? (
+                                                        <img 
+                                                            src={playerData.photo_url} 
+                                                            alt={playerData.name} 
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <User size={64} className="text-primary/40" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex-1 min-w-0 w-full md:w-auto">
+                                                <h4 className="text-lg font-bold text-foreground mb-2 break-words">
+                                                    {playerData.name || 'N/A'}
+                                                </h4>
+                                                <div className="space-y-1 text-sm">
+                                                    <p className="text-muted-foreground">
+                                                        <span className="font-medium">ID:</span> {playerData.identification || 'N/A'}
+                                                    </p>
+                                                    <p className="text-muted-foreground">
+                                                        <span className="font-medium">Posición:</span> {playerData.position || 'N/A'}
+                                                    </p>
+                                                    <p className="text-muted-foreground">
+                                                        <span className="font-medium">Categoría:</span> {playerData.category || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Información de contacto */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <Label className="text-sm font-medium text-muted-foreground mb-1 block">Email</Label>
+                                                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                                                    <Mail size={16} className="text-muted-foreground shrink-0" />
+                                                    <p className="text-sm text-foreground break-all min-w-0">
+                                                        {playerData.email || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <Label className="text-sm font-medium text-muted-foreground mb-1 block">Teléfono</Label>
+                                                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                                                    <Phone size={16} className="text-muted-foreground shrink-0" />
+                                                    <p className="text-sm text-foreground">
+                                                        {playerData.phone || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {playerData.birth_date && (
+                                                <div>
+                                                    <Label className="text-sm font-medium text-muted-foreground mb-1 block">Fecha de Nacimiento</Label>
+                                                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                                                        <Calendar size={16} className="text-muted-foreground shrink-0" />
+                                                        <p className="text-sm text-foreground">
+                                                            {new Date(playerData.birth_date).toLocaleDateString('es-CO')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </main>
-
-            {/* Camera Modal */}
-            {showCamera && (
-                <CameraCapture 
-                    title={`Capturar ${showCamera.side === 'front' ? 'Frente' : 'Dorso'} de Identificación`}
-                    onCapture={(blob) => handleFileUpload(blob, showCamera.side)}
-                    onClose={() => setShowCamera(null)}
-                />
-            )}
         </div>
     );
 }

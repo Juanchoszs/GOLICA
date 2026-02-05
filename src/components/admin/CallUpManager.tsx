@@ -19,7 +19,7 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const allCategories = ['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23', 'Profesional'];
+  const allCategories = ['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'];
   const categories = allowedCategories 
     ? allCategories.filter(c => allowedCategories.includes(c))
     : allCategories;
@@ -43,6 +43,7 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         category: p.category,
         position: p.position,
         image: p.image_url, // Assuming image_url exists based on prompt "buckets de imágenes"
+        photo_url: p.photo_url, // Photo URL from database
         status: 'available' 
       }));
 
@@ -130,13 +131,7 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
                </div>
                <ChevronRight className="text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
-            <h3 className="text-xl font-bold mb-1">{cat}</h3>
-            <p className="text-sm text-muted-foreground mb-4">Crear o editar convocatoria</p>
-            
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-               <Calendar size={14} />
-               <span>Última mod: --/--/----</span>
-            </div>
+            <h3 className="text-xl font-bold mb-4">{cat}</h3>
           </Card>
         ))}
       </div>

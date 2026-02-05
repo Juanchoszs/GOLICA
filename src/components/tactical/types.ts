@@ -6,6 +6,7 @@ export interface Player {
   category: string;
   position?: string;
   image?: string; // If available in future
+  photo_url?: string; // Photo URL from database
   status: 'available' | 'assigned' | 'injured' | 'suspended';
 }
 

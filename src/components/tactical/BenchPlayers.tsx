@@ -69,7 +69,7 @@ export function BenchPlayers({
 
       {/* Lista de Jugadores */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-2">
+        <div className="p-4">
           {filteredPlayers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
@@ -86,7 +86,7 @@ export function BenchPlayers({
             <>
               {/* Jugadores disponibles */}
               {filteredPlayers.filter(p => !assignedPlayerIds.includes(p.id)).length > 0 && (
-                <div className="space-y-2 mb-6">
+                <div className="mb-6">
                   <div className="flex items-center gap-2 px-2 mb-3">
                     <div className="flex-1 h-px bg-border/50" />
                     <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
@@ -94,22 +94,24 @@ export function BenchPlayers({
                     </span>
                     <div className="flex-1 h-px bg-border/50" />
                   </div>
-                  {filteredPlayers
-                    .filter(p => !assignedPlayerIds.includes(p.id))
-                    .map(player => (
-                      <DraggablePlayer
-                        key={player.id}
-                        player={player}
-                        origin="list"
-                        isAssigned={false}
-                      />
-                    ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {filteredPlayers
+                      .filter(p => !assignedPlayerIds.includes(p.id))
+                      .map(player => (
+                        <DraggablePlayer
+                          key={player.id}
+                          player={player}
+                          origin="list"
+                          isAssigned={false}
+                        />
+                      ))}
+                  </div>
                 </div>
               )}
 
               {/* Jugadores asignados */}
               {filteredPlayers.filter(p => assignedPlayerIds.includes(p.id)).length > 0 && (
-                <div className="space-y-2">
+                <div>
                   <div className="flex items-center gap-2 px-2 mb-3">
                     <div className="flex-1 h-px bg-border/50" />
                     <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-1">
@@ -118,16 +120,18 @@ export function BenchPlayers({
                     </span>
                     <div className="flex-1 h-px bg-border/50" />
                   </div>
-                  {filteredPlayers
-                    .filter(p => assignedPlayerIds.includes(p.id))
-                    .map(player => (
-                      <DraggablePlayer
-                        key={player.id}
-                        player={player}
-                        origin="list"
-                        isAssigned={true}
-                      />
-                    ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {filteredPlayers
+                      .filter(p => assignedPlayerIds.includes(p.id))
+                      .map(player => (
+                        <DraggablePlayer
+                          key={player.id}
+                          player={player}
+                          origin="list"
+                          isAssigned={true}
+                        />
+                      ))}
+                  </div>
                 </div>
               )}
             </>
