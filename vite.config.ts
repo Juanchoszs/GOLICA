@@ -5,6 +5,12 @@
 
   export default defineConfig({
     plugins: [react()],
+    optimize: {
+      exclude: ['html2canvas'],
+    },
+    optimizeDeps: {
+      exclude: ['html2canvas'],
+    },
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {

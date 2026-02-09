@@ -9,7 +9,7 @@ import { SoccerField } from './SoccerField';
 import { DndContext, useDraggable, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { supabase } from '../../utils/supabase/client';
 import { toast } from 'sonner';
-import { Download, Trash2, Users, Shirt, RefreshCw } from 'lucide-react';
+import { Download, Trash2, Users, Shirt, RotateCcw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // --- Formations (Strict 11 Slots) ---
@@ -78,7 +78,7 @@ function DraggablePlayer({ player, sourceId }: { player: any, sourceId: string }
     });
 
     const style = transform ? {
-        transform: `translate3d(\${transform.x}px, \${transform.y}px, 0)`,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         zIndex: 999,
     } : undefined;
 
@@ -101,28 +101,28 @@ function DraggablePlayer({ player, sourceId }: { player: any, sourceId: string }
 
 function FieldSlot({ slot, player, onRemove }: { slot: any, player: any, onRemove: () => void }) {
     const { setNodeRef, isOver } = useDroppable({
-        id: `slot-\${slot.id}`,
+        id: `slot-${slot.id}`,
         data: { slotId: slot.id }
     });
 
     const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
-        id: player ? `field-player-\${player.id}` : `empty-slot-\${slot.id}`, // Only draggable if player exists
-        data: { player, sourceId: `slot-\${slot.id}`, type: 'field' },
+        id: player ? `field-player-${player.id}` : `empty-slot-${slot.id}`, // Only draggable if player exists
+        data: { player, sourceId: `slot-${slot.id}`, type: 'field' },
         disabled: !player
     });
 
     // Slot Position
     const slotStyle: any = {
         position: 'absolute',
-        left: `\${slot.x}%`,
-        top: `\${slot.y}%`,
+        left: `${slot.x}%`,
+        top: `${slot.y}%`,
         transform: 'translate(-50%, -50%)',
         zIndex: 10,
     };
 
     // Dragging visuals
     const dragStyle = transform ? {
-        transform: `translate3d(\${transform.x}px, \${transform.y}px, 0)`,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         zIndex: 100,
     } : undefined;
 
@@ -131,7 +131,7 @@ function FieldSlot({ slot, player, onRemove }: { slot: any, player: any, onRemov
             ref={setNodeRef}
             style={slotStyle}
             className={`w-14 h-14 md:w-20 md:h-20 rounded-full border-2 flex items-center justify-center transition-all duration-300
-            \${isOver ? 'border-primary bg-primary/20 scale-110 shadow-[0_0_15px_rgba(34,197,94,0.6)]' : 'border-white/30 bg-black/20 hover:border-white/60'}
+            ${isOver ? 'border-primary bg-primary/20 scale-110 shadow-[0_0_15px_rgba(34,197,94,0.6)]' : 'border-white/30 bg-black/20 hover:border-white/60'}
         `}
         >
             {/* Role Label (Ghost) */}
@@ -146,7 +146,7 @@ function FieldSlot({ slot, player, onRemove }: { slot: any, player: any, onRemov
                     {...listeners}
                     {...attributes}
                     style={dragStyle}
-                    className={`flex flex-col items-center cursor-move touch-none \${isDragging ? 'opacity-0' : ''} group`}
+                    className={`flex flex-col items-center cursor-move touch-none ${isDragging ? 'opacity-0' : ''} group`}
                 >
                     <div className="relative">
                         <div className="w-10 h-10 md:w-14 md:h-14 rounded-full overflow-hidden border-2 border-white bg-primary shadow-lg relative z-10 transition-transform group-hover:scale-105">
@@ -177,12 +177,12 @@ function FieldSlot({ slot, player, onRemove }: { slot: any, player: any, onRemov
 
 function BenchPlayer({ player }: { player: any }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: `bench-player-\${player.id}`,
+        id: `bench-player-${player.id}`,
         data: { player, sourceId: 'bench' }
     });
 
     const style = transform ? {
-        transform: `translate3d(\${transform.x}px, \${transform.y}px, 0)`,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
         zIndex: 999
     } : undefined;
 
@@ -222,14 +222,19 @@ export function Convocatoria({ coach }: { coach: any }) {
     // Load players
     useEffect(() => {
         async function fetchPlayers() {
-            if (!coach?.assigned_categories) return;
-            const { data } = await supabase.from('players').select('*').eq('status', 'active');
-            if (data) {
-                const filtered = data.filter((p: any) => {
-                    if (!p.category) return false;
-                    return coach.assigned_categories.some((c: string) => p.category.includes(c));
-                });
-                setPlayers(filtered);
+            try {
+                const { data } = await supabase.from('players').select('*').eq('status', 'active');
+                if (data) {
+                    const filtered = data.filter((p: any) => {
+                        if (!p.category) return true; // Include players without category
+                        if (!coach?.assigned_categories) return true; // If coach has no categories, show all
+                        return coach.assigned_categories.some((c: string) => p.category.includes(c));
+                    });
+                    setPlayers(filtered);
+                }
+            } catch (error) {
+                console.error('Error loading players:', error);
+                toast.error('Error al cargar jugadores');
             }
         }
         fetchPlayers();
@@ -245,7 +250,7 @@ export function Convocatoria({ coach }: { coach: any }) {
         try {
             const canvas = await html2canvas(fieldRef.current, { backgroundColor: '#2d7a36', scale: 2 });
             const link = document.createElement('a');
-            link.download = `alineacion-\${matchInfo.opponent || 'partido'}.png`;
+            link.download = `alineacion-${matchInfo.opponent || 'partido'}.png`;
             link.href = canvas.toDataURL();
             link.click();
             toast.success('Descarga iniciada');
@@ -502,10 +507,14 @@ export function Convocatoria({ coach }: { coach: any }) {
                         <h3 className="font-bold text-base text-foreground flex items-center gap-2 mb-3">
                             <Shirt size={16} className="text-primary" /> Plantel Disponible
                         </h3>
-                        <Select onValueChange={(val) => setMatchInfo({ ...matchInfo, category: val })}>
+                        <Select onValueChange={(val) => setMatchInfo({ ...matchInfo, category: val })} value={matchInfo.category}>
                             <SelectTrigger className="w-full h-9 text-xs"><SelectValue placeholder="Filtrar Categoría" /></SelectTrigger>
                             <SelectContent>
-                                {coach?.assigned_categories?.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                {(coach?.assigned_categories && Array.isArray(coach.assigned_categories)) ? (
+                                    coach.assigned_categories.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)
+                                ) : (
+                                    <SelectItem value="todas">Todas las categorías</SelectItem>
+                                )}
                             </SelectContent>
                         </Select>
                     </div>
@@ -535,9 +544,4 @@ export function Convocatoria({ coach }: { coach: any }) {
             </DragOverlay>
         </DndContext>
     );
-}
-
-// Icon helper
-function RotateCcw({ size }: { size: number }) {
-    return <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12" /><path d="M3 5v7h7" /></svg>;
 }

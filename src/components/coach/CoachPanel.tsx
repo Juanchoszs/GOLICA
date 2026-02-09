@@ -1,8 +1,10 @@
 
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { UserCog, LogOut, Menu, X, Moon, Sun } from 'lucide-react';
-import { CallUpManager } from '../admin/CallUpManager';
+import { UserCog, LogOut, Menu, X, Moon, Sun, ClipboardList, CalendarDays } from 'lucide-react';
+import { Convocatoria } from './Convocatoria';
+import { PlanningList } from '../planning/PlanningList';
+import { PlanningBuilder } from '../planning/PlanningBuilder';
 import { useTheme } from '../ThemeContext';
 
 interface CoachPanelProps {
@@ -12,6 +14,9 @@ interface CoachPanelProps {
 
 export function CoachPanel({ user, onLogout }: CoachPanelProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'convocatoria' | 'planning'>('convocatoria');
+  const [planningView, setPlanningView] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedSession, setSelectedSession] = useState<any>(null);
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -60,11 +65,20 @@ export function CoachPanel({ user, onLogout }: CoachPanelProps) {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <Button
-              variant="default"
-              className={`w-full justify-start bg-primary text-primary-foreground`}
+              variant={activeTab === 'convocatoria' ? 'secondary' : 'ghost'}
+              className={`w-full justify-start`}
+              onClick={() => setActiveTab('convocatoria')}
             >
-              <UserCog size={20} className={sidebarOpen ? 'mr-3' : ''} />
+              <ClipboardList size={20} className={sidebarOpen ? 'mr-3' : ''} />
               {sidebarOpen && <span>Convocatorias</span>}
+            </Button>
+            <Button
+              variant={activeTab === 'planning' ? 'secondary' : 'ghost'}
+              className={`w-full justify-start`}
+              onClick={() => setActiveTab('planning')}
+            >
+              <CalendarDays size={20} className={sidebarOpen ? 'mr-3' : ''} />
+              {sidebarOpen && <span>Planificaciones</span>}
             </Button>
         </nav>
 
@@ -90,7 +104,7 @@ export function CoachPanel({ user, onLogout }: CoachPanelProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-auto bg-muted/10 flex flex-col">
         <div className="md:hidden sticky top-0 z-10 bg-card border-b border-border p-4 flex items-center justify-between">
            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
              <Menu size={20} />
@@ -99,9 +113,42 @@ export function CoachPanel({ user, onLogout }: CoachPanelProps) {
            <div className="w-10"/>
         </div>
 
-        <div className="h-full">
-            <CallUpManager allowedCategories={user.assigned_categories || user.category ? [user.assigned_categories || user.category].flat() : undefined} />
-        </div>
+        {activeTab === 'convocatoria' && (
+            <div className="h-full flex flex-col flex-1">
+                <header className="px-6 py-4 bg-background/50 backdrop-blur-sm border-b border-border sticky top-0 z-40 flex justify-between items-center">
+                    <h1 className="text-2xl font-bold">Convocatoria de Partido</h1>
+                </header>
+                <div className="p-4 md:p-6 flex-1 overflow-auto">
+                    <Convocatoria coach={user} />
+                </div>
+            </div>
+        )}
+        
+        {activeTab === 'planning' && (
+            <div className="h-full flex flex-col flex-1">
+                <header className="px-6 py-4 bg-background/50 backdrop-blur-sm border-b border-border sticky top-0 z-40 flex justify-between items-center">
+                    <h1 className="text-2xl font-bold">Planificaciones de Entrenamiento</h1>
+                </header>
+                <div className="p-4 md:p-6 flex-1 overflow-auto">
+                    {planningView === 'list' && (
+                        <PlanningList 
+                            userRole="coach" 
+                            userId={user.id} 
+                            onCreateNew={() => { setSelectedSession(null); setPlanningView('create'); }}
+                            onEdit={(session) => { setSelectedSession(session); setPlanningView('edit'); }}
+                        />
+                    )}
+                    {(planningView === 'create' || planningView === 'edit') && (
+                        <PlanningBuilder 
+                            coachId={user.id}
+                            initialData={selectedSession}
+                            onSave={() => setPlanningView('list')}
+                            onCancel={() => setPlanningView('list')}
+                        />
+                    )}
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );

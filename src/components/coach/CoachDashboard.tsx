@@ -1,8 +1,9 @@
-
 import { useState } from 'react';
 import { Convocatoria } from './Convocatoria';
 import { Button } from '../ui/button';
 import { ClipboardList, CalendarDays, LogOut } from 'lucide-react';
+import { PlanningList } from '../planning/PlanningList';
+import { PlanningBuilder } from '../planning/PlanningBuilder';
 
 interface CoachDashboardProps {
   coach: any;
@@ -11,6 +12,8 @@ interface CoachDashboardProps {
 
 export function CoachDashboard({ coach, onLogout }: CoachDashboardProps) {
   const [activeTab, setActiveTab] = useState<'convocatoria' | 'planning'>('convocatoria');
+  const [planningView, setPlanningView] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedSession, setSelectedSession] = useState<any>(null);
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -75,9 +78,25 @@ export function CoachDashboard({ coach, onLogout }: CoachDashboardProps) {
         )}
         
         {activeTab === 'planning' && (
-            <div className="flex h-full items-center justify-center text-muted-foreground flex-col gap-4">
-                <CalendarDays size={48} className="opacity-20" />
-                <p>Módulo de Planificaciones próximamente</p>
+            <div className="h-full flex flex-col">
+                <div className="p-4 md:p-6 flex-1">
+                    {planningView === 'list' && (
+                        <PlanningList 
+                            userRole="coach" 
+                            userId={coach.id} 
+                            onCreateNew={() => { setSelectedSession(null); setPlanningView('create'); }}
+                            onEdit={(session) => { setSelectedSession(session); setPlanningView('edit'); }}
+                        />
+                    )}
+                    {(planningView === 'create' || planningView === 'edit') && (
+                        <PlanningBuilder 
+                            coachId={coach.id}
+                            initialData={selectedSession}
+                            onSave={() => setPlanningView('list')}
+                            onCancel={() => setPlanningView('list')}
+                        />
+                    )}
+                </div>
             </div>
         )}
       </main>

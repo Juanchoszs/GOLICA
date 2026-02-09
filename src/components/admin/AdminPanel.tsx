@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield } from 'lucide-react';
+import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield, CalendarDays } from 'lucide-react';
 import { CallUpManager } from './CallUpManager';
 import { PlayersManagement } from './PlayersManagement';
 import { CoachDashboard } from '../coach/CoachDashboard';
 import { CoachesManagement } from './CoachesManagement';
 import { useTheme } from '../ThemeContext';
+import { PlanningList } from '../planning/PlanningList';
+import { PlanningBuilder } from '../planning/PlanningBuilder';
 
 interface AdminPanelProps {
   user: any;
@@ -17,10 +19,15 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme, toggleTheme } = useTheme();
 
+  // State for Planning Module
+  const [planningView, setPlanningView] = useState<'list' | 'create' | 'edit'>('list');
+  const [selectedSession, setSelectedSession] = useState<any>(null);
+
   const menuItems = [
     { id: 'jugadores', label: 'Jugadores', icon: Users, available: true },
     { id: 'gestion-entrenadores', label: 'Entrenadores', icon: Shield, available: true },
     { id: 'entrenador', label: 'Convocatorias', icon: UserCog, available: true },
+    { id: 'planificaciones', label: 'Planificaciones', icon: CalendarDays, available: true },
     { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: false },
     { id: 'administrativo', label: 'Administrativo', icon: Settings, available: false },
   ];
@@ -33,6 +40,27 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
         return <CoachesManagement />;
       case 'entrenador':
         return <CallUpManager />;
+      case 'planificaciones':
+        return (
+            <div className="p-6">
+                {planningView === 'list' && (
+                    <PlanningList 
+                        userRole="admin" 
+                        userId={user.id} 
+                        onCreateNew={() => { setSelectedSession(null); setPlanningView('create'); }}
+                        onEdit={(session) => { setSelectedSession(session); setPlanningView('edit'); }}
+                    />
+                )}
+                {(planningView === 'create' || planningView === 'edit') && (
+                    <PlanningBuilder 
+                        coachId={selectedSession?.coach_id || user.id} 
+                        initialData={selectedSession}
+                        onSave={() => setPlanningView('list')}
+                        onCancel={() => setPlanningView('list')}
+                    />
+                )}
+            </div>
+        );
       case 'fisioterapia':
         return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo de Fisioterapia - Próximamente</h2></div>;
       case 'administrativo':
@@ -96,7 +124,13 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
                     ? 'bg-primary text-primary-foreground'
                     : 'text-foreground hover:bg-muted'
                   } ${!item.available ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => item.available && setActiveSection(item.id)}
+                onClick={() => {
+                    if (item.available) {
+                        setActiveSection(item.id);
+                        // Reset sub-view state when switching main tabs
+                        if (item.id === 'planificaciones') setPlanningView('list');
+                    }
+                }}
                 disabled={!item.available}
               >
                 <Icon size={20} className={sidebarOpen ? 'mr-3' : ''} />
