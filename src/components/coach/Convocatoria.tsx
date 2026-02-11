@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -83,17 +83,29 @@ function DraggablePlayer({ player, sourceId }: { player: any, sourceId: string }
     } : undefined;
 
     if (isDragging) {
+        // Mientras se arrastra, el token real queda transparente y usamos el DragOverlay circular.
         return <div ref={setNodeRef} style={style} className="opacity-0" />;
     }
 
     return (
-        <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="p-2 mb-2 bg-card border border-border rounded-md shadow-sm cursor-move hover:border-primary flex items-center gap-2 touch-none relative group select-none">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-muted border border-border">
-                {player.photo_url ? <img src={player.photo_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">👤</div>}
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...listeners}
+            {...attributes}
+            className="flex flex-col items-center gap-1 mb-2 cursor-move touch-none select-none group"
+        >
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-muted border border-border shadow-sm">
+                {player.photo_url ? (
+                    <img src={player.photo_url} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs">👤</div>
+                )}
             </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{player.name}</p>
-                <p className="text-[10px] text-muted-foreground">{player.position || 'JUG'}</p>
+            <div className="w-full text-center">
+                <p className="text-[10px] md:text-xs font-medium text-foreground truncate">
+                    {player.name.split(' ').slice(0, 2).join(' ')}
+                </p>
             </div>
         </div>
     );
@@ -191,11 +203,23 @@ function BenchPlayer({ player }: { player: any }) {
     }
 
     return (
-        <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="relative group bg-card border border-border rounded-lg p-2 flex items-center gap-2 shadow-sm pr-2 cursor-move hover:border-primary touch-none">
-            <div className="w-6 h-6 rounded-full overflow-hidden bg-muted border border-border">
-                {player.photo_url ? <img src={player.photo_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px]">👤</div>}
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...listeners}
+            {...attributes}
+            className="flex flex-col items-center gap-1 cursor-move touch-none select-none"
+        >
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden bg-muted border border-border shadow-sm">
+                {player.photo_url ? (
+                    <img src={player.photo_url} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px]">👤</div>
+                )}
             </div>
-            <span className="text-xs font-medium">{player.name.split(' ')[0]}</span>
+            <span className="text-[10px] md:text-xs font-medium truncate max-w-[72px]">
+                {player.name.split(' ')[0]}
+            </span>
         </div>
     );
 }
@@ -403,10 +427,10 @@ export function Convocatoria({ coach }: { coach: any }) {
 
     return (
         <DndContext onDragEnd={handleDragEnd} onDragStart={(e: any) => setDraggedPlayer(e.active.data.current.player)}>
-            <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-140px)] lg:h-[calc(100vh-140px)] pb-10 lg:pb-0">
+            <div className="flex flex-col lg:flex-row gap-6 pb-10">
 
                 {/* Left: Field & Controls */}
-                <div className="flex-1 flex flex-col gap-4 min-h-0">
+                <div className="flex-1 flex flex-col gap-4">
                     {/* Controls Bar */}
                     <Card className="p-4 bg-card flex flex-col gap-4 shadow-sm flex-shrink-0">
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -472,7 +496,11 @@ export function Convocatoria({ coach }: { coach: any }) {
                     </Card>
 
                     {/* Field */}
-                    <div className="flex-1 relative min-h-0" id="capture-zone" ref={fieldRef}>
+                    <div
+                        className="flex-1 relative min-h-[320px] md:min-h-[420px]"
+                        id="capture-zone"
+                        ref={fieldRef}
+                    >
                         <SoccerField>
                             {currentSlots.map((slot: any) => (
                                 <FieldSlot
@@ -534,11 +562,20 @@ export function Convocatoria({ coach }: { coach: any }) {
 
             </div>
 
-            {/* Drag Preview */}
+            {/* Drag Preview: token circular con foto y nombre debajo */}
             <DragOverlay>
                 {draggedPlayer ? (
-                    <div className="w-12 h-12 rounded-full border-2 border-white bg-primary shadow-2xl overflow-hidden opacity-90 scale-110 pointer-events-none">
-                        {draggedPlayer.photo_url ? <img src={draggedPlayer.photo_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white">👤</div>}
+                    <div className="pointer-events-none flex flex-col items-center gap-1">
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-white bg-primary shadow-2xl overflow-hidden opacity-90">
+                            {draggedPlayer.photo_url ? (
+                                <img src={draggedPlayer.photo_url} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-white">👤</div>
+                            )}
+                        </div>
+                        <div className="px-2 py-0.5 rounded-full bg-black/80 text-white text-[10px] md:text-xs max-w-[90px] text-center truncate shadow-lg border border-white/20">
+                            {draggedPlayer.name.split(' ').slice(0, 2).join(' ')}
+                        </div>
                     </div>
                 ) : null}
             </DragOverlay>

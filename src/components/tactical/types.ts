@@ -31,6 +31,10 @@ export interface CallUp {
   lineupId: string;
   assignments: Record<string, string>; // positionId -> playerId
   createdAt?: string;
+  opponent?: string;
+  date?: string;
+  time?: string;
+  location?: string;
 }
 
 export interface DragItem {

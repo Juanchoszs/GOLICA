@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { UserCog, LogOut, Menu, X, Moon, Sun, ClipboardList, CalendarDays } from 'lucide-react';
 import { Convocatoria } from './Convocatoria';
@@ -20,7 +20,7 @@ export function CoachPanel({ user, onLogout }: CoachPanelProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
       <aside
         className={`${

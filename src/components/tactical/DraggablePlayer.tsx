@@ -80,7 +80,7 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
       {...attributes}
       className={`
         group relative
-        max-w-[200px] w-full
+        w-24 mx-auto
         ${isDragging ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
         ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}
         transition-all duration-200
@@ -95,7 +95,7 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
       `}>
         {/* Avatar con foto de perfil */}
         <div className={`
-          w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center
+          w-12 h-12 rounded-full overflow-hidden flex items-center justify-center
           ${isAssigned 
             ? 'bg-muted border-2 border-muted-foreground/20' 
             : 'bg-gradient-to-br from-primary to-primary/80 border-2 border-primary/30'
@@ -126,14 +126,12 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
         {/* Info del jugador */}
         <div className="w-full text-center min-w-0">
           <div className={`
-            text-xs font-bold truncate px-1
+            text-[10px] font-bold truncate px-1
             ${isAssigned ? 'text-muted-foreground' : 'text-foreground'}
           `}>
             {player.name.split(' ').slice(0, 2).join(' ')}
           </div>
-          <div className="text-[10px] text-muted-foreground font-medium truncate px-1">
-            ID: {player.identification.slice(-6)}
-          </div>
+          {/* Ocultamos el ID para mantener el diseño compacto tipo \"bolita\" */}
         </div>
 
         {/* Indicador de estado */}

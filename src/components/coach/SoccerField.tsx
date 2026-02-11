@@ -10,7 +10,7 @@ export function SoccerField({ children }: { children: React.ReactNode }) {
   return (
     <div 
         ref={setNodeRef}
-        className="relative w-full aspect-[3/4] rounded-lg border-[3px] border-white/20 overflow-hidden shadow-2xl transition-all"
+        className="relative w-full h-[420px] md:h-[520px] rounded-lg border-[3px] border-white/20 overflow-hidden shadow-2xl transition-all"
         style={{
             background: '#1a472a', // Dark tactical green
             boxShadow: 'inset 0 0 80px rgba(0,0,0,0.5)' // Vignette

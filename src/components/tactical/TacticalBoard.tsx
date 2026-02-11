@@ -21,6 +21,7 @@ import { BenchPlayers } from './BenchPlayers';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
 
 interface TacticalBoardProps {
   players: Player[];
@@ -34,6 +35,12 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [matchInfo, setMatchInfo] = useState({
+    opponent: '',
+    date: '',
+    time: '',
+    location: '',
+  });
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -114,6 +121,11 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
   };
 
   const handleSaveWrapper = () => {
+    if (!matchInfo.opponent || !matchInfo.date) {
+      toast.error('Por favor ingresa rival y fecha');
+      return;
+    }
+
     const gkPos = currentLineup.positions.find(p => p.role === 'Portero');
     if (gkPos && !assignments[gkPos.id]) {
       toast.error('¡Falta el Portero (GK)! 🛡️');
@@ -130,7 +142,11 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       category: categoryName,
       lineupId: selectedLineupId,
       assignments,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      opponent: matchInfo.opponent,
+      date: matchInfo.date,
+      time: matchInfo.time,
+      location: matchInfo.location,
     });
     toast.success('Convocatoria guardada exitosamente 🏆');
   };
@@ -196,11 +212,53 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
             <Button
               onClick={handleSaveWrapper}
-              className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 font-bold px-8 py-2.5 rounded-xl transition-all duration-200"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 py-2.5 rounded-xl"
             >
               <Save size={16} className="mr-2" />
               Guardar Convocatoria
             </Button>
+          </div>
+        </div>
+
+        {/* Barra de información del partido */}
+        <div className="px-8 py-4 border-b border-border/40 bg-background/60 backdrop-blur-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Rival</Label>
+              <Input
+                value={matchInfo.opponent}
+                onChange={(e) => setMatchInfo({ ...matchInfo, opponent: e.target.value })}
+                placeholder="Equipo rival"
+                className="h-9 text-xs"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Fecha</Label>
+              <Input
+                type="date"
+                value={matchInfo.date}
+                onChange={(e) => setMatchInfo({ ...matchInfo, date: e.target.value })}
+                className="h-9 text-xs"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Hora</Label>
+              <Input
+                type="time"
+                value={matchInfo.time}
+                onChange={(e) => setMatchInfo({ ...matchInfo, time: e.target.value })}
+                className="h-9 text-xs"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-[10px] uppercase text-muted-foreground">Ubicación</Label>
+              <Input
+                value={matchInfo.location}
+                onChange={(e) => setMatchInfo({ ...matchInfo, location: e.target.value })}
+                placeholder="Estadio / Lugar"
+                className="h-9 text-xs"
+              />
+            </div>
           </div>
         </div>
 
@@ -338,18 +396,25 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
         </div>
       </div>
 
-      {/* Overlay de Arrastre */}
+      {/* Overlay de Arrastre: siempre un token circular con foto y nombre debajo */}
       <DragOverlay>
         {activeId && draggedPlayer ? (
-          <div className="opacity-95 pointer-events-none shadow-2xl scale-110 rotate-2 transition-all duration-200">
-            <div className="bg-gradient-to-r from-primary to-primary/90 text-white px-6 py-4 rounded-2xl font-bold shadow-[0_20px_50px_rgba(var(--primary),0.5)] border-2 border-white/20 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-sm font-black backdrop-blur-sm">
-                {draggedPlayer.identification.slice(-2)}
-              </div>
-              <div>
-                <div className="text-base font-black">{draggedPlayer.name}</div>
-                <div className="text-xs opacity-80">Arrastrando...</div>
-              </div>
+          <div className="pointer-events-none flex flex-col items-center gap-1 opacity-95">
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-full border-2 border-white bg-primary shadow-2xl overflow-hidden">
+              {draggedPlayer.photo_url ? (
+                <img
+                  src={draggedPlayer.photo_url}
+                  alt={draggedPlayer.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white font-black text-xs md:text-sm">
+                  {draggedPlayer.identification.slice(-2)}
+                </div>
+              )}
+            </div>
+            <div className="px-2 py-0.5 rounded-full bg-black/80 text-white text-[10px] md:text-xs max-w-[90px] text-center truncate shadow-lg border border-white/20">
+              {draggedPlayer.name.split(' ').slice(0, 2).join(' ')}
             </div>
           </div>
         ) : null}

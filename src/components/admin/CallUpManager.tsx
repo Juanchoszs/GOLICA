@@ -27,6 +27,11 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
   // Load players for the selected category
   const loadPlayers = async (category: string) => {
     setIsLoading(true);
+    // Aseguramos que la plantilla táctica siempre se muestre
+    // aunque haya problemas al cargar los jugadores.
+    setSelectedCategory(category);
+    setView('board');
+
     try {
       const { data, error } = await supabase
         .from('players')
@@ -44,14 +49,13 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         position: p.position,
         image: p.image_url, // Assuming image_url exists based on prompt "buckets de imágenes"
         photo_url: p.photo_url, // Photo URL from database
-        status: 'available' 
+        status: 'available',
       }));
 
       setPlayers(formatted);
-      setSelectedCategory(category);
-      setView('board');
     } catch (err) {
       console.error(err);
+      setPlayers([]);
       toast.error('Error al cargar jugadores');
     } finally {
       setIsLoading(false);
@@ -60,45 +64,58 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
 
   const handleSaveCallUp = async (callup: CallUp) => {
     try {
-        // Save to DB
-        // Structure: { category, alineacion, convocatoria: [...] }
-        // User provided: "convocatoria: [{ posicion, jugadorId }]"
-        
-        // Transform assignments Record<posId, playerId> to Array with exact keys requested
-        const convocatoriaArray = Object.entries(callup.assignments).map(([posId, playerId]) => ({
-            posicionId: posId,
-            jugadorId: playerId
-        }));
+      if (!callup.opponent || !callup.date) {
+        toast.error('Por favor ingresa rival y fecha');
+        return;
+      }
 
-        const payload = {
-            categoria: callup.category,
-            alineacion: callup.lineupId,
-            convocatoria: convocatoriaArray,
-            created_at: new Date().toISOString()
+      // Combinar fecha y hora en un solo datetime (mismo criterio que en Convocatoria de coach)
+      let fullDate = callup.date;
+      if (callup.date && callup.time) {
+        const [hours, minutes] = callup.time.split(':');
+        const dateObj = new Date(callup.date);
+        dateObj.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
+        fullDate = dateObj.toISOString();
+      } else if (callup.date) {
+        const dateObj = new Date(callup.date);
+        dateObj.setHours(12, 0, 0, 0);
+        fullDate = dateObj.toISOString();
+      }
+
+      // Construir lista de jugadores a partir de las asignaciones
+      const playersList = Object.entries(callup.assignments).map(([posId, playerId]) => {
+        const player = players.find(p => p.id === playerId);
+        return {
+          id: playerId,
+          name: player?.name || '',
+          position: player?.position,
+          positionId: posId,
+          isStarter: true,
         };
+      });
 
-        const { error } = await supabase
-            .from('convocatorias') // Assuming this table exists or I should create it
-            .insert([payload]);
+      const payload = {
+        opponent: callup.opponent,
+        date: fullDate,
+        time: callup.time || null,
+        location: callup.location || null,
+        category: callup.category,
+        formation: callup.lineupId,
+        players: playersList,
+        created_at: new Date().toISOString(),
+      };
 
-        if (error) {
-             // If table doesn't exist, maybe user wants me to simulate or provide the JSON?
-             // "Preparado para enviar a API REST o GraphQL"
-             // I will log it and show success for now if table missing.
-             console.warn('Backend save might fail if table missing:', error);
-             throw error;
-         }
+      const { error } = await supabase.from('convocatorias').insert([payload]);
 
-        toast.success(`Convocatoria ${callup.category} guardada`);
-        setView('list');
-    } catch (err: any) {
-        // If error is "relation does not exist", we still "Succeed" in UI for the demo if user hasn't created table
-        if (err.message?.includes('relation "public.convocatorias" does not exist')) {
-            toast.success('Simulación: Convocatoria guardada (Tabla no existe aún)');
-            setView('list');
-        } else {
-            toast.error('Error al guardar convocatoria');
-        }
+      if (error) {
+        console.warn('Error al guardar convocatoria:', error);
+        throw error;
+      }
+
+      toast.success(`Convocatoria ${callup.category} guardada`);
+      setView('list');
+    } catch {
+      toast.error('Error al guardar convocatoria');
     }
   };
 
