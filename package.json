@@ -1,5 +1,5 @@
 {
-      "name": "Golica",
+      "name": "golica",
       "version": "0.1.0",
       "private": true,
       "dependencies": {
@@ -34,12 +34,14 @@
             "class-variance-authority": "^0.7.1",
             "clsx": "*",
             "cmdk": "^1.1.1",
+            "date-fns": "^4.1.0",
             "embla-carousel-react": "^8.6.0",
             "framer-motion": "^12.33.0",
             "hono": "^4",
             "html2canvas": "^1.4.1",
             "input-otp": "^1.4.2",
             "jspdf": "^4.0.0",
+            "konva": "^9.3.22",
             "lucide-react": "^0.487.0",
             "next-themes": "^0.4.6",
             "react": "^19.0.0",
@@ -47,18 +49,22 @@
             "react-dom": "^19.0.0",
             "react-easy-crop": "^5.5.6",
             "react-hook-form": "^7.55.0",
+            "react-konva": "^19.2.2",
             "react-resizable-panels": "^2.1.7",
             "recharts": "^2.15.2",
             "sonner": "^2.0.3",
             "tailwind-merge": "*",
+            "use-image": "^1.1.1",
             "vaul": "^1.1.2"
       },
       "devDependencies": {
+            "@tailwindcss/vite": "^4.0.0",
             "@types/node": "^20.10.0",
             "@types/react": "^19.0.0",
             "@types/react-dom": "^19.0.0",
             "@vitejs/plugin-react-swc": "^3.11.0",
-            "vercel": "^32.3.0",
+            "tailwindcss": "^4.0.0",
+            "vercel": "^50.15.1",
             "vite": "^6.4.1"
       },
       "overrides": {
@@ -72,5 +78,19 @@
       "scripts": {
             "dev": "vite",
             "build": "vite build"
-      }
+      },
+      "description": "This is a code bundle for Club de Fútbol Website Design. The original project is available at https://www.figma.com/design/8NxHnKXpqvIW8DaNtifZQX/Club-de-F%C3%BAtbol-Website-Design.",
+      "main": "index.js",
+      "repository": {
+            "type": "git",
+            "url": "git+https://github.com/Juanchoszs/GOLICA.git"
+      },
+      "keywords": [],
+      "author": "",
+      "license": "ISC",
+      "type": "commonjs",
+      "bugs": {
+            "url": "https://github.com/Juanchoszs/GOLICA/issues"
+      },
+      "homepage": "https://github.com/Juanchoszs/GOLICA#readme"
 }

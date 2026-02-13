@@ -1,13 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../../utils/supabase/client';
 import { TacticalBoard } from '../tactical/TacticalBoard';
 import { Player, CallUp } from '../tactical/types';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
-import { Calendar, Users, ChevronRight } from 'lucide-react';
+import { Users, ChevronRight } from 'lucide-react';
 
 interface CallUpManagerProps {
   allowedCategories?: string[];
@@ -19,16 +17,19 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const allCategories = ['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'];
-  const categories = allowedCategories 
-    ? allCategories.filter(c => allowedCategories.includes(c))
-    : allCategories;
+  // Define todos los posibles valores de categorías si no se pasan
+  const allCategoriesAvailable = ['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'];
+  
+  // Si allowedCategories es nulo, indefinido o vacío, usamos todas las categorías.
+  // Pero ojo: si es un array vacío, tal vez el coach NO TIENE categorías.
+  // Sin embargo, para mayor robustez, si no se especifica, mostramos el listado completo o lo permitido.
+  const categories = allowedCategories && allowedCategories.length > 0 
+    ? allCategoriesAvailable.filter(c => allowedCategories.includes(c))
+    : allCategoriesAvailable;
 
   // Load players for the selected category
   const loadPlayers = async (category: string) => {
     setIsLoading(true);
-    // Aseguramos que la plantilla táctica siempre se muestre
-    // aunque haya problemas al cargar los jugadores.
     setSelectedCategory(category);
     setView('board');
 
@@ -37,7 +38,7 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         .from('players')
         .select('*')
         .eq('category', category)
-        .eq('status', 'active'); // Only active players
+        .eq('status', 'active');
 
       if (error) throw error;
 
@@ -47,8 +48,8 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         identification: p.identification,
         category: p.category,
         position: p.position,
-        image: p.image_url, // Assuming image_url exists based on prompt "buckets de imágenes"
-        photo_url: p.photo_url, // Photo URL from database
+        image: p.image_url,
+        photo_url: p.photo_url,
         status: 'available',
       }));
 
@@ -69,7 +70,6 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         return;
       }
 
-      // Combinar fecha y hora en un solo datetime (mismo criterio que en Convocatoria de coach)
       let fullDate = callup.date;
       if (callup.date && callup.time) {
         const [hours, minutes] = callup.time.split(':');
@@ -82,7 +82,6 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         fullDate = dateObj.toISOString();
       }
 
-      // Construir lista de jugadores a partir de las asignaciones
       const playersList = Object.entries(callup.assignments).map(([posId, playerId]) => {
         const player = players.find(p => p.id === playerId);
         return {
@@ -107,14 +106,12 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
 
       const { error } = await supabase.from('convocatorias').insert([payload]);
 
-      if (error) {
-        console.warn('Error al guardar convocatoria:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       toast.success(`Convocatoria ${callup.category} guardada`);
       setView('list');
-    } catch {
+    } catch (err) {
+      console.error('Error al guardar convocatoria:', err);
       toast.error('Error al guardar convocatoria');
     }
   };

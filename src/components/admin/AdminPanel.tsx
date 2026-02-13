@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield, CalendarDays } from 'lucide-react';
-import { CallUpManager } from './CallUpManager';
+import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield, CalendarDays, BookOpen } from 'lucide-react';
+import { CallUpManager } from '../convocatorias/CallUpManager';
 import { PlayersManagement } from './PlayersManagement';
+import { SessionsManagement } from './SessionsManagement';
 import { CoachDashboard } from '../coach/CoachDashboard';
 import { CoachesManagement } from './CoachesManagement';
 import { useTheme } from '../ThemeContext';
@@ -27,6 +28,7 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
     { id: 'jugadores', label: 'Jugadores', icon: Users, available: true },
     { id: 'gestion-entrenadores', label: 'Entrenadores', icon: Shield, available: true },
     { id: 'entrenador', label: 'Convocatorias', icon: UserCog, available: true },
+    { id: 'sesiones-entrenamientos', label: 'Sesiones', icon: BookOpen, available: true },
     { id: 'planificaciones', label: 'Planificaciones', icon: CalendarDays, available: true },
     { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: false },
     { id: 'administrativo', label: 'Administrativo', icon: Settings, available: false },
@@ -39,7 +41,9 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
       case 'gestion-entrenadores':
         return <CoachesManagement />;
       case 'entrenador':
-        return <CallUpManager />;
+        return <CallUpManager allowedCategories={user.assigned_categories} />;
+      case 'sesiones-entrenamientos':
+        return <SessionsManagement />;
       case 'planificaciones':
         return (
             <div className="p-6">

@@ -67,3 +67,5 @@ coverage/
 # Optional: Docker
 # =========================
 docker-compose.override.yml
+.vercel
+.env*.local

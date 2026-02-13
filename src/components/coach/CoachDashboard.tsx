@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Convocatoria } from './Convocatoria';
+import { CallUpManager } from '../convocatorias/CallUpManager';
 import { Button } from '../ui/button';
 import { ClipboardList, CalendarDays, LogOut } from 'lucide-react';
 import { PlanningList } from '../planning/PlanningList';
@@ -72,7 +72,7 @@ export function CoachDashboard({ coach, onLogout }: CoachDashboardProps) {
                     {/* Add global actions here if needed */}
                  </header>
                  <div className="p-4 md:p-6 flex-1">
-                    <Convocatoria coach={coach} />
+                    <CallUpManager allowedCategories={coach.assigned_categories} />
                  </div>
             </div>
         )}

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { UserCog, LogOut, Menu, X, Moon, Sun, ClipboardList, CalendarDays } from 'lucide-react';
-import { Convocatoria } from './Convocatoria';
+import { CallUpManager } from '../convocatorias/CallUpManager';
 import { PlanningList } from '../planning/PlanningList';
 import { PlanningBuilder } from '../planning/PlanningBuilder';
 import { useTheme } from '../ThemeContext';
@@ -119,7 +119,7 @@ export function CoachPanel({ user, onLogout }: CoachPanelProps) {
                     <h1 className="text-2xl font-bold">Convocatoria de Partido</h1>
                 </header>
                 <div className="p-4 md:p-6 flex-1 overflow-auto">
-                    <Convocatoria coach={user} />
+                    <CallUpManager allowedCategories={user.assigned_categories} />
                 </div>
             </div>
         )}

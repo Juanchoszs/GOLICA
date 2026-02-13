@@ -1,150 +1,86 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../utils/supabase/client';
+import React, { useState } from 'react';
+import { TrainingSession } from './types/session.types';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Plus, Edit, Trash2, Calendar, Clock, Eye } from 'lucide-react';
-import { toast } from 'sonner';
-import { TrainingSession } from './types';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { Plus } from 'lucide-react';
 
 interface PlanningListProps {
-  userRole: 'admin' | 'coach';
-  userId: string; // Coach ID or Admin ID (though Admin sees all)
-  onCreateNew: () => void;
-  onEdit: (session: TrainingSession) => void;
+  userRole?: 'coach' | 'admin';
+  userId?: string;
+  onCreateNew?: () => void;
+  onEdit?: (session: TrainingSession) => void;
 }
 
-export function PlanningList({ userRole, userId, onCreateNew, onEdit }: PlanningListProps) {
+/**
+ * PlanningList Component
+ * 
+ * Displays a list of training sessions
+ * Users can create new sessions or edit existing ones
+ */
+export const PlanningList: React.FC<PlanningListProps> = ({
+  userRole,
+  userId,
+  onCreateNew,
+  onEdit
+}) => {
+  // TODO: Implementar carga de sesiones desde Supabase
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSessions();
-  }, [userId, userRole]);
-
-  async function fetchSessions() {
-    try {
-      setLoading(true);
-      let query = supabase
-        .from('training_sessions')
-        .select(`
-          *,
-          session_phases (
-            *,
-            session_exercises (*)
-          )
-        `)
-        .order('date', { ascending: false });
-
-      if (userRole === 'coach') {
-        query = query.eq('coach_id', userId);
-      }
-      
-      // If admin, we might want to join with coaches/admins table to get coach name, 
-      // but for now let's just show the raw data or fetch coach names separately if needed.
-      // Since we don't have a reliable 'coaches' table relation setup in the type system yet,
-      // we will just list the sessions.
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      
-      const mappedSessions: TrainingSession[] = (data || []).map((s: any) => ({
-        ...s,
-        phases: (s.session_phases || [])
-            .sort((a: any, b: any) => a.order_index - b.order_index)
-            .map((p: any) => ({
-                ...p,
-                exercises: (p.session_exercises || []).sort((a: any, b: any) => a.order_index - b.order_index)
-            }))
-      }));
-
-      setSessions(mappedSessions);
-    } catch (error) {
-      console.error('Error fetching sessions:', error);
-      toast.error('Error al cargar las planificaciones');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta planificación?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('training_sessions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      toast.success('Planificación eliminada');
-      setSessions(sessions.filter(s => s.id !== id));
-    } catch (error) {
-      console.error('Error deleting session:', error);
-      toast.error('Error al eliminar la planificación');
+  const handleCreateNew = () => {
+    if (onCreateNew) {
+      onCreateNew();
     }
   };
 
-  if (loading) {
-    return <div className="p-8 text-center">Cargando planificaciones...</div>;
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold tracking-tight">Planificaciones de Entrenamiento</h2>
-        <Button onClick={onCreateNew} className="gap-2">
-          <Plus size={16} />
-          Nueva Planificación
+    <div className="w-full space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">📋 Mis Sesiones de Entrenamiento</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {userRole === 'admin'
+              ? 'Gestiona las sesiones de entrenamiento del equipo'
+              : 'Crea y edita tus sesiones de entrenamiento'}
+          </p>
+        </div>
+        <Button onClick={handleCreateNew} className="gap-2">
+          <Plus size={18} />
+          Nueva Sesión
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {sessions.map((session) => (
-          <Card key={session.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex justify-between items-start">
-                <span className="text-lg font-bold truncate pr-2">{session.title}</span>
-                {/* <Badge variant="outline">{session.category}</Badge> */}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} />
-                  <span>{format(new Date(session.date), "d 'de' MMMM, yyyy", { locale: es })}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock size={14} />
-                  <span>{session.time}</span>
-                </div>
-                <div className="line-clamp-2 italic">
-                  {session.general_objective}
-                </div>
+      {/* Sessions Grid or Empty State */}
+      {sessions.length === 0 ? (
+        <div className="p-12 text-center border rounded-lg border-dashed text-muted-foreground">
+          <div className="text-3xl mb-3">📝</div>
+          <p className="text-sm font-medium">No hay sesiones de entrenamiento creadas.</p>
+          <p className="text-xs mt-2">Comienza creando una nueva sesión.</p>
+          <Button onClick={handleCreateNew} className="mt-4" variant="outline">
+            Crear Primera Sesión
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              className="p-4 border rounded-lg bg-card hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => onEdit?.(session)}
+            >
+              <h3 className="font-bold truncate">{session.name}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date(session.date).toLocaleDateString('es-ES')}
+              </p>
+              <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+                <p>Calentamiento: {session.warmup.exercises.length} ejercicios</p>
+                <p>Parte Principal: {session.main.exercises.length} ejercicios</p>
               </div>
-
-              <div className="flex gap-2 justify-end">
-                 <Button variant="outline" size="sm" onClick={() => onEdit(session)}>
-                    {userRole === 'admin' ? <Eye size={14} className="mr-1"/> : <Edit size={14} className="mr-1"/>}
-                    {userRole === 'admin' ? 'Ver/Editar' : 'Editar'}
-                 </Button>
-                 <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => session.id && handleDelete(session.id)}>
-                    <Trash2 size={14} />
-                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {sessions.length === 0 && (
-          <div className="col-span-full text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground">
-            No hay planificaciones registradas.
-          </div>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default PlanningList;
