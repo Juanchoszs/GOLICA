@@ -4,6 +4,7 @@ import { Group, Rect, Line, Circle, Arc } from 'react-konva';
 interface FieldProps {
   width: number;
   height: number;
+  isVertical?: boolean;
 }
 
 const LINE_COLOR = 'white';
@@ -11,14 +12,24 @@ const LINE_WIDTH = 2;
 const PADDING = 20;
 const GRASS_COLOR = '#2d5a27';
 
-export const Field: React.FC<FieldProps> = ({ width, height }) => {
+export const Field: React.FC<FieldProps> = ({ width, height, isVertical }) => {
   const fieldW = width - PADDING * 2;
   const fieldH = height - PADDING * 2;
   const centerX = width / 2;
   const centerY = height / 2;
 
+  const scale = isVertical ? height / width : 1;
+
   return (
-    <Group>
+    <Group
+      x={isVertical ? width / 2 : 0}
+      y={isVertical ? height / 2 : 0}
+      rotation={isVertical ? 90 : 0}
+      scaleX={scale}
+      scaleY={scale}
+      offsetX={isVertical ? width / 2 : 0}
+      offsetY={isVertical ? height / 2 : 0}
+    >
       {/* Grass */}
       <Rect
         x={0}
@@ -27,7 +38,7 @@ export const Field: React.FC<FieldProps> = ({ width, height }) => {
         height={height}
         fill={GRASS_COLOR}
       />
-      
+
       {/* Outer Boundary */}
       <Rect
         x={PADDING}

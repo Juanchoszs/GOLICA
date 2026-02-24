@@ -19,8 +19,12 @@ import {
     X,
     ChevronRight,
     MapPin,
-    Shirt
+    Shirt,
+    Upload,
+    Scissors,
+    Camera
 } from 'lucide-react';
+import { ImageEditor } from './ui/ImageEditor';
 import { toast } from 'sonner';
 import { supabase } from '../utils/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +38,8 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
     const [playerData, setPlayerData] = useState<any>(user);
     const [activeTab, setActiveTab] = useState('overview');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile state
+    const [isUploading, setIsUploading] = useState(false);
+    const [editingImage, setEditingImage] = useState<{ url: string, field: string } | null>(null);
     const { theme, toggleTheme } = useTheme();
     const [convocatorias, setConvocatorias] = useState<any[]>([]);
 
@@ -46,7 +52,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                 .select('*')
                 .eq('id', user.id)
                 .single();
-            if (pData) setPlayerData(pData);
+            if (pData) setPlayerData((prev: any) => ({ ...prev, ...pData }));
 
             // Convocatorias - Filtrar por categoría del jugador
             const { data: cData } = await supabase
@@ -60,7 +66,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                     // Verificar si el jugador está en la lista de jugadores de la convocatoria
                     const isInPlayers = Array.isArray(c.players) && c.players.some((p: any) => p.id === user.id);
                     // Verificar si la categoría de la convocatoria coincide con la del jugador
-                    const categoryMatch = !c.category || !playerCategory || 
+                    const categoryMatch = !c.category || !playerCategory ||
                         (typeof c.category === 'string' && playerCategory.includes(c.category)) ||
                         (typeof playerCategory === 'string' && c.category.includes(playerCategory));
                     return isInPlayers && categoryMatch;
@@ -91,6 +97,89 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
     ];
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+    const handleUploadClick = (field: string) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = (e: any) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    setEditingImage({
+                        url: event.target?.result as string,
+                        field
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+        input.click();
+    };
+
+    const handleUpdateImage = async (blob: Blob) => {
+        if (!editingImage) return;
+
+        const toastId = toast.loading('Subiendo imagen...');
+        setIsUploading(true);
+        try {
+            const bucketName = 'player-documents';
+            const folder = editingImage.field === 'photo_url' ? 'fotos de perfil' : 'documents';
+            const fileName = `${playerData.id}/${folder}/${editingImage.field}_${Date.now()}.jpg`;
+
+            const { error: uploadError } = await supabase.storage
+                .from(bucketName)
+                .upload(fileName, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from(bucketName)
+                .getPublicUrl(fileName);
+
+            // Actualizar en la base de datos inmediatamente
+            const { error: dbError, data: updateData } = await supabase
+                .from('players')
+                .update({ [editingImage.field]: publicUrl })
+                .eq('id', playerData.id)
+                .select('*');
+
+            if (dbError) {
+                console.error("Error saving URL to DB:", dbError);
+                throw new Error(`Fallo en BD: ${dbError.message}`);
+            } else if (!updateData || updateData.length === 0) {
+                throw new Error(`Permiso denegado por RLS en Supabase (El jugador no tiene permiso para actualizar su perfil).`);
+            }
+
+            setPlayerData((prev: any) => ({
+                ...prev,
+                [editingImage.field]: publicUrl
+            }));
+
+            setEditingImage(null);
+            toast.success('¡Documento subido y guardado exitosamente!', { id: toastId });
+        } catch (error: any) {
+            console.error('Error uploading image:', error);
+            toast.error(error.message || 'Error al subir la imagen.', { id: toastId, duration: 10000 });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    if (editingImage) {
+        return (
+            <ImageEditor
+                image={editingImage.url}
+                onSave={handleUpdateImage}
+                onCancel={() => setEditingImage(null)}
+                aspect={editingImage.field === 'photo_url' ? 1 / 1 : 1.6 / 1}
+            />
+        );
+    }
 
     return (
         <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/20">
@@ -138,7 +227,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                             />
                         </div>
                         <div className="min-w-0">
-                            <h3 className="font-bold text-sm truncate">{playerData.name.split(' ')[0]}</h3>
+                            <h3 className="font-bold text-sm truncate">{(playerData.name || '').split(' ')[0] || 'Jugador'}</h3>
                             <p className="text-xs text-muted-foreground truncate">{playerData.position || 'Jugador'}</p>
                         </div>
                     </div>
@@ -198,7 +287,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                         <span className="font-bold text-lg">{navItems.find(i => i.id === activeTab)?.label}</span>
                     </div>
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                        {playerData.name.charAt(0)}
+                        {playerData?.name?.charAt(0) || user?.name?.charAt(0) || 'P'}
                     </div>
                 </div>
 
@@ -210,7 +299,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                         {activeTab === 'overview' && (
                             <>
                                 <header className="mb-8 hidden md:block">
-                                    <h1 className="text-3xl font-bold tracking-tight mb-2">Hola, {playerData.name.split(' ')[0]} 👋</h1>
+                                    <h1 className="text-3xl font-bold tracking-tight mb-2">Hola, {(playerData.name || '').split(' ')[0] || 'Jugador'} 👋</h1>
                                     <p className="text-muted-foreground">Aquí tienes el resumen de tu actividad deportiva.</p>
                                 </header>
 
@@ -262,20 +351,20 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                             <h2 className="text-4xl md:text-5xl font-black text-white italic tracking-tighter mb-2">VS {convocatorias[0].opponent}</h2>
                                             <div className="flex items-center gap-6 text-white/80">
                                                 <span className="flex items-center gap-2">
-                                                    <Clock size={16} /> 
+                                                    <Clock size={16} />
                                                     {convocatorias[0].time || new Date(convocatorias[0].date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                                 {convocatorias[0].location && (
                                                     <span className="flex items-center gap-2">
-                                                        <MapPin size={16} /> 
+                                                        <MapPin size={16} />
                                                         {convocatorias[0].location}
                                                     </span>
                                                 )}
                                             </div>
                                             <div className="mt-6">
                                                 <span className={`px-4 py-2 rounded-lg font-bold text-sm ${convocatorias[0].players?.find((p: any) => p.id === user.id)?.isStarter
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'bg-yellow-500 text-black'
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-yellow-500 text-black'
                                                     }`}>
                                                     {convocatorias[0].players?.find((p: any) => p.id === user.id)?.isStarter ? 'TITULAR' : 'SUPLENTE'}
                                                 </span>
@@ -311,16 +400,16 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                                         <h3 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors">{conv.opponent}</h3>
                                                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                                                             <span className="flex items-center gap-1">
-                                                                <Calendar size={14} /> 
+                                                                <Calendar size={14} />
                                                                 {new Date(conv.date).toLocaleDateString()}
                                                             </span>
                                                             <span className="flex items-center gap-1">
-                                                                <Clock size={14} /> 
+                                                                <Clock size={14} />
                                                                 {conv.time || new Date(conv.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                             {conv.location && (
                                                                 <span className="flex items-center gap-1">
-                                                                    <MapPin size={14} /> 
+                                                                    <MapPin size={14} />
                                                                     {conv.location}
                                                                 </span>
                                                             )}
@@ -351,7 +440,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                     <h2 className="text-2xl font-bold mb-2">Rendimiento</h2>
                                     <p className="text-muted-foreground">Tu rendimiento general y estadísticas.</p>
                                 </header>
-                                
+
                                 {/* Card de Rendimiento General */}
                                 <div className="text-card-foreground flex flex-col gap-6 rounded-xl border bg-card border-border p-6">
                                     <div className="flex items-center gap-3 mb-2">
@@ -411,16 +500,16 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                 {/* Card de FICHA TÉCNICA */}
                                 <div className="text-card-foreground flex flex-col gap-6 rounded-xl border bg-card border-border p-6">
                                     <h3 className="text-xl font-semibold mb-4">FICHA TÉCNICA</h3>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Foto y datos principales */}
                                         <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                                             <div className="relative group overflow-hidden shrink-0">
                                                 <div className="w-32 h-32 bg-primary/10 border-2 border-primary/20 rounded-full flex items-center justify-center overflow-hidden shadow-lg">
                                                     {playerData.photo_url ? (
-                                                        <img 
-                                                            src={playerData.photo_url} 
-                                                            alt={playerData.name} 
+                                                        <img
+                                                            src={playerData.photo_url}
+                                                            alt={playerData.name}
                                                             className="w-full h-full object-cover"
                                                         />
                                                     ) : (
@@ -428,7 +517,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex-1 min-w-0 w-full md:w-auto">
                                                 <h4 className="text-lg font-bold text-foreground mb-2 break-words">
                                                     {playerData.name || 'N/A'}
@@ -470,7 +559,7 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                             {playerData.birth_date && (
                                                 <div>
                                                     <Label className="text-sm font-medium text-muted-foreground mb-1 block">Fecha de Nacimiento</Label>
-                                                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                                                    <div className="flex items-center gap-1 p-2 bg-muted/30 rounded-lg">
                                                         <Calendar size={16} className="text-muted-foreground shrink-0" />
                                                         <p className="text-sm text-foreground">
                                                             {new Date(playerData.birth_date).toLocaleDateString('es-CO')}
@@ -478,6 +567,97 @@ export function PlayerPortal({ user, onLogout }: PlayerPortalProps) {
                                                     </div>
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Documentación */}
+                                <div className="text-card-foreground flex flex-col gap-6 rounded-xl border bg-card border-border p-6 mt-6">
+                                    <h3 className="text-xl font-semibold flex items-center gap-2">
+                                        <Shield size={20} className="text-primary" />
+                                        Documentación de Identidad
+                                    </h3>
+                                    <p className="text-muted-foreground text-sm">
+                                        Sube fotos claras de ambos lados de tu tarjeta de identidad.
+                                    </p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Lado Frontal */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lado Frontal</p>
+                                                {playerData.id_card_front_url && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 text-xs text-primary hover:bg-primary/5"
+                                                        onClick={() => handleUploadClick('id_card_front_url')}
+                                                    >
+                                                        <Scissors size={12} className="mr-1" /> Editar
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div
+                                                onClick={() => !isUploading && handleUploadClick('id_card_front_url')}
+                                                className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-all"
+                                            >
+                                                {playerData.id_card_front_url ? (
+                                                    <img
+                                                        src={playerData.id_card_front_url}
+                                                        alt="ID Front"
+                                                        className="max-h-full max-w-full object-contain"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Upload size={24} className="text-muted-foreground mb-2" />
+                                                        <p className="text-muted-foreground text-xs">Subir frontal</p>
+                                                    </>
+                                                )}
+                                                {isUploading && (
+                                                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                                                        <Activity size={24} className="animate-spin text-primary" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Lado Posterior */}
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lado Posterior</p>
+                                                {playerData.id_card_back_url && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 text-xs text-primary hover:bg-primary/5"
+                                                        onClick={() => handleUploadClick('id_card_back_url')}
+                                                    >
+                                                        <Scissors size={12} className="mr-1" /> Editar
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <div
+                                                onClick={() => !isUploading && handleUploadClick('id_card_back_url')}
+                                                className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-all"
+                                            >
+                                                {playerData.id_card_back_url ? (
+                                                    <img
+                                                        src={playerData.id_card_back_url}
+                                                        alt="ID Back"
+                                                        className="max-h-full max-w-full object-contain"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <Upload size={24} className="text-muted-foreground mb-2" />
+                                                        <p className="text-muted-foreground text-xs">Subir posterior</p>
+                                                    </>
+                                                )}
+                                                {isUploading && (
+                                                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                                                        <Activity size={24} className="animate-spin text-primary" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

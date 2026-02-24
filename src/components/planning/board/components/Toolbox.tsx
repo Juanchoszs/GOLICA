@@ -1,19 +1,20 @@
 import React from 'react';
-import { Button } from '../../ui/button';
-import { 
-  User, 
-  Flag, 
+import { Button } from '../../../ui/button';
+import {
+  User,
+  Flag,
   Goal,
-  Square, 
-  MousePointer2, 
-  Type, 
+  Square,
+  MousePointer2,
+  Type,
   Trash2,
   Save,
   Download,
   RotateCcw,
   Pin,
   Layers,
-  Circle
+  Dribbble,
+  Triangle
 } from 'lucide-react';
 
 interface ToolboxProps {
@@ -54,9 +55,9 @@ export const Toolbox: React.FC<ToolboxProps> = ({
               className="justify-start gap-2 h-9"
               onClick={() => onAddElement('player', p.color)}
             >
-              <div 
-                className="w-3 h-3 rounded-full border border-white/20" 
-                style={{ backgroundColor: p.color }} 
+              <div
+                className="w-3 h-3 rounded-full border border-white/20"
+                style={{ backgroundColor: p.color }}
               />
               <span className="text-[10px]">{p.label}</span>
             </Button>
@@ -67,58 +68,58 @@ export const Toolbox: React.FC<ToolboxProps> = ({
       <div>
         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Materiales</h3>
         <div className="grid grid-cols-2 gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-col h-16 gap-1"
             onClick={() => onAddElement('cone', '#F97316')}
           >
-            <Flag size={18} className="text-orange-500" />
+            <Triangle size={18} className="text-orange-500" />
             <span className="text-[10px]">Cono</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-col h-16 gap-1"
             onClick={() => onAddElement('goal', '#FFFFFF')}
           >
             <Goal size={18} className="text-blue-400" />
             <span className="text-[10px]">Portería</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-col h-16 gap-1"
             onClick={() => onAddElement('zone', 'rgba(34, 197, 94, 0.2)')}
           >
             <Square size={18} className="text-green-500" />
-            <span className="text-[10px]">Zona</span>
+            <span className="text-[10px]">Esp. Reducido</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-col h-16 gap-1"
             onClick={() => onAddElement('stake', '#8B4513')}
           >
             <Pin size={18} className="text-amber-700" />
             <span className="text-[10px]">Estaca</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-col h-16 gap-1"
             onClick={() => onAddElement('ladder', '#D97706')}
           >
             <Layers size={18} className="text-amber-600" />
             <span className="text-[10px]">Escalera</span>
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-col h-16 gap-1"
             onClick={() => onAddElement('ball', '#000000')}
           >
-            <Circle size={18} className="text-black dark:text-white" fill="currentColor" />
+            <Dribbble size={18} className="text-black dark:text-white" />
             <span className="text-[10px]">Balón</span>
           </Button>
         </div>
@@ -155,7 +156,7 @@ export const Toolbox: React.FC<ToolboxProps> = ({
           onClick={onSave}
         >
           <Save size={16} />
-          <span>Guardar JSON</span>
+          <span>Guardar Pizarra</span>
         </Button>
         <Button
           variant="secondary"

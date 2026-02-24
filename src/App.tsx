@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import { ThemeProvider } from './components/ThemeContext';
+import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { HomePage } from './components/HomePage';
@@ -11,39 +11,42 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { CoachPanel } from './components/coach/CoachPanel';
 import { PlayerPortal } from './components/PlayerPortal';
 import { Toaster } from './components/ui/sonner';
+import { useState, useEffect } from 'react';
 
-export default function App() {
+function AppContent() {
   const [currentPage, setCurrentPage] = useState(() => {
     return localStorage.getItem('golica_page') || 'inicio';
   });
-  const [user, setUser] = useState<any>(() => {
-    const savedUser = localStorage.getItem('golica_user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+
+  const { profile, loading, isAuthenticated, logout } = useAuthContext();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     localStorage.setItem('golica_page', currentPage);
   }, [currentPage]);
 
+  // When user authenticates, redirect to admin panel
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('golica_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('golica_user');
+    if (isAuthenticated && profile && currentPage === 'login') {
+      setCurrentPage('admin');
     }
-  }, [user]);
+  }, [isAuthenticated, profile, currentPage]);
 
-  const handleLogin = (userData: any) => {
-    setUser(userData);
-    setCurrentPage('admin');
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('golica_user');
+  const handleLogout = async () => {
+    await logout();
+    localStorage.removeItem('golica_page');
     setCurrentPage('inicio');
   };
+
+  // Build a user-like object for backward compatibility with existing panels
+  const user = profile ? {
+    id: profile.id,
+    name: profile.name,
+    email: profile.email,
+    role: profile.role,
+    identification: profile.identification,
+    assigned_categories: profile.assigned_categories,
+  } : null;
 
   const renderPage = () => {
     switch (currentPage) {
@@ -56,9 +59,25 @@ export default function App() {
       case 'contacto':
         return <ContactPage />;
       case 'login':
-        return <LoginPage onLogin={handleLogin} />;
+        if (loading) {
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <div className="text-muted-foreground text-lg">Cargando...</div>
+            </div>
+          );
+        }
+        return <LoginPage />;
       case 'admin':
-        if (!user) return <LoginPage onLogin={handleLogin} />;
+        if (loading) {
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <div className="text-muted-foreground text-lg">Cargando...</div>
+            </div>
+          );
+        }
+        if (!isAuthenticated || !user) {
+          return <LoginPage />;
+        }
         if (user.role === 'admin') return <AdminPanel user={user} onLogout={handleLogout} />;
         if (user.role === 'coach') return <CoachPanel user={user} onLogout={handleLogout} />;
         return <PlayerPortal user={user} onLogout={handleLogout} />;
@@ -68,16 +87,24 @@ export default function App() {
   };
 
   return (
+    <div className="min-h-screen bg-background transition-colors duration-300">
+      {currentPage !== 'admin' && <Header currentPage={currentPage} onNavigate={setCurrentPage} />}
+      <main>
+        {renderPage()}
+      </main>
+      {currentPage !== 'login' && currentPage !== 'contacto' && currentPage !== 'admin' && <Footer />}
+      {currentPage === 'contacto' && <Footer />}
+      <Toaster />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
     <ThemeProvider>
-      <div className="min-h-screen bg-background transition-colors duration-300">
-        {currentPage !== 'admin' && <Header currentPage={currentPage} onNavigate={setCurrentPage} />}
-        <main>
-          {renderPage()}
-        </main>
-        {currentPage !== 'login' && currentPage !== 'contacto' && currentPage !== 'admin' && <Footer />}
-        {currentPage === 'contacto' && <Footer />}
-        <Toaster />
-      </div>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

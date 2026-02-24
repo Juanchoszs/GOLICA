@@ -36,6 +36,8 @@ export interface MainExercise {
   psychology: string;                   // Psicología/Cognitiva
   physical: string;                     // Físico
   tacticBoardData?: string;             // JSON de la pizarra táctica
+  tacticBoardImageUrl?: string;         // URL pública de la imagen de la pizarra
+  tacticBoardImageBase64?: string;      // Imagen en base64 pendiente por subir
 }
 
 export interface MainSection {
@@ -50,10 +52,10 @@ export interface TrainingSession {
   coachId: string;
   teamId?: string;
   categoryName?: string;
-  
+
   warmup: WarmupSection;
   main: MainSection;
-  
+
   createdAt: string;
   updatedAt: string;
 }

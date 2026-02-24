@@ -3,27 +3,15 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { UserCircle, Lock, Mail, User, Phone, Calendar, CheckCircle2, Shield } from 'lucide-react';
+import { Lock, Mail, CheckCircle2, UserCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../utils/supabase/client';
+import { useAuthContext } from '../contexts/AuthContext';
 
-interface LoginPageProps {
-  onLogin?: (user: any) => void;
-}
-
-export function LoginPage({ onLogin }: LoginPageProps) {
-  const [loginData, setLoginData] = useState({ identification: '', password: '' });
-  const [registerData, setRegisterData] = useState({
-    name: '',
-    identification: '',
-    email: '',
-    phone: '',
-    birthdate: '',
-    password: '',
-    confirmPassword: '',
-  });
+export function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuthContext();
 
   const benefits = [
     'Acceso a convocatorias y calendario de partidos',
@@ -36,101 +24,21 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     'Certificados y diplomas digitales',
   ];
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // 1. Try Admin Login
-      console.log('Attempting Admin login with:', loginData.identification);
-      const { data: admin, error: adminError } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('identification', loginData.identification)
-        .eq('password', loginData.password)
-        .maybeSingle(); // Use maybeSingle to avoid 406 errors on 0 rows
+      const result = await login(email, password);
 
-      if (adminError) console.error('Admin login error:', adminError);
-
-      if (admin) {
-        toast.success(`¡Inicio de sesión exitoso! Bienvenido ${admin.name}.`);
-        const { password: _, ...adminSafedata } = admin;
-        onLogin?.({
-          ...adminSafedata,
-          role: admin.role || 'admin'
-        });
-        return; // Exit if admin login is successful
+      if (result.success) {
+        toast.success('¡Inicio de sesión exitoso!');
+      } else {
+        toast.error(result.error || 'Credenciales incorrectas');
       }
-
-      // 2. Try Coach Login (Primary Fallback)
-      console.log('Admin not found, trying Coach login...');
-      const { data: coach, error: coachError } = await supabase
-        .from('coaches')
-        .select('*')
-        .eq('identification', loginData.identification)
-        .eq('password', loginData.password)
-        .maybeSingle();
-
-      if (coachError) console.error('Coach login error:', coachError);
-
-      if (coach) {
-        toast.success(`¡Bienvenido Profe ${coach.name}!`);
-        if (onLogin) onLogin({ ...coach, role: 'coach' });
-        return;
-      }
-
-      // If neither found
-      toast.error('Credenciales incorrectas');
     } catch (error) {
       console.error('Error en login:', error);
       toast.error('Error al conectar con el servidor');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (registerData.password !== registerData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
-      return;
-    }
-    if (registerData.password.length < 8) {
-      toast.error('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .insert([{
-          name: registerData.name,
-          identification: registerData.identification,
-          email: registerData.email,
-          phone: registerData.phone,
-          birth_date: registerData.birthdate || null,
-          password: registerData.password,
-          status: 'active'
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        if (error.code === '23505') {
-          toast.error('Ya existe un registro con este email o identificación');
-        } else {
-          toast.error(`Error: ${error.message}`);
-        }
-        return;
-      }
-
-      toast.success('¡Registro exitoso! Ya puedes iniciar sesión.');
-      setRegisterData({ name: '', identification: '', email: '', phone: '', birthdate: '', password: '', confirmPassword: '' });
-    } catch (error) {
-      console.error('Error en registro:', error);
-      toast.error('Error al registrarse. Inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -147,7 +55,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <span className="text-primary text-sm">Área Exclusiva</span>
               </div>
               <h1 className="text-foreground text-4xl md:text-5xl mb-4" style={{ fontFamily: 'var(--font-display)' }}>
-                Portal de Jugadores
+                Portal
                 <br />
                 <span className="text-primary">GOL ICA</span>
               </h1>
@@ -176,9 +84,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                   <UserCircle className="text-primary" size={24} />
                 </div>
                 <div>
-                  <h4 className="text-foreground mb-2">¿Nuevo en GOL ICA?</h4>
+                  <h4 className="text-foreground mb-2">¿Necesitas acceso?</h4>
                   <p className="text-muted-foreground text-sm">
-                    Si aún no eres jugador del club, primero visita nuestras instalaciones o contáctanos para conocer nuestros programas de formación.
+                    Si necesitas acceso al sistema, contacta al administrador del club para que te creen una cuenta.
                   </p>
                   <p className="text-primary text-sm mt-2">
                     📞 <a href="https://wa.me/573012345678" target="_blank" rel="noopener noreferrer" className="hover:text-primary/80">+57 301 234 5678</a> | 📧 golica@gmail.com
@@ -188,161 +96,59 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </Card>
           </div>
 
-          {/* Right Side - Forms */}
+          {/* Right Side - Login Form */}
           <div className="order-1 lg:order-2">
             <Card className="bg-card border-border p-8">
-              <Tabs defaultValue="player" className="w-full">
-                <TabsList className="flex w-full mb-8 bg-muted/30 p-1">
-                  <TabsTrigger
-                    value="player"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                  >
-                    Jugador
-                  </TabsTrigger>
+              <div className="mb-6">
+                <h2 className="text-foreground text-2xl mb-2" style={{ fontFamily: 'var(--font-display)' }}>
+                  Iniciar Sesión
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  Ingresa con tu email y contraseña
+                </p>
+              </div>
 
-                  <TabsTrigger
-                    value="admin"
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground hover:bg-muted/50 transition-all text-xs sm:text-sm"
-                  >
-                    <Shield size={14} className="mr-1 hidden sm:inline" />
-                    Admin
-                  </TabsTrigger>
-                </TabsList>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div>
+                  <Label htmlFor="login-email" className="text-foreground flex items-center gap-2">
+                    <Mail size={16} />
+                    Email
+                  </Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="tu@email.com"
+                    className="bg-input-background border-border text-foreground"
+                  />
+                </div>
 
-                {/* Player Login Form */}
-                <TabsContent value="player">
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    setIsLoading(true);
-                    try {
-                      const email = (document.getElementById('player-email') as HTMLInputElement).value;
-                      const password = (document.getElementById('player-password') as HTMLInputElement).value;
+                <div>
+                  <Label htmlFor="login-password" className="text-foreground flex items-center gap-2">
+                    <Lock size={16} />
+                    Contraseña
+                  </Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="bg-input-background border-border text-foreground"
+                  />
+                </div>
 
-                      const { data: player, error } = await supabase
-                        .from('players')
-                        .select('*')
-                        .eq('email', email)
-                        .eq('password', password)
-                        .maybeSingle();
-
-                      if (error || !player) {
-                        toast.error('Credenciales incorrectas');
-                      } else if (onLogin) {
-                        toast.success(`¡Bienvenido de nuevo, ${player.name}!`);
-                        const { password: _, ...playerSafedata } = player;
-                        onLogin({
-                          ...playerSafedata,
-                          role: 'player'
-                        });
-                      }
-                    } catch (err) {
-                      console.error('Error logging in player:', err);
-                      toast.error('Error al iniciar sesión');
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }} className="space-y-6">
-                    <div>
-                      <Label htmlFor="player-email" className="text-foreground flex items-center gap-2">
-                        <Mail size={16} />
-                        Email
-                      </Label>
-                      <Input
-                        id="player-email"
-                        type="email"
-                        required
-                        placeholder="tu@email.com"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="player-password" className="text-foreground flex items-center gap-2">
-                        <Lock size={16} />
-                        Contraseña
-                      </Label>
-                      <Input
-                        id="player-password"
-                        type="password"
-                        required
-                        placeholder="••••••••"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2">
-                        <input type="checkbox" className="rounded border-border" />
-                        <span className="text-muted-foreground text-sm">Recordarme</span>
-                      </label>
-                      <a href="#" className="text-primary hover:text-primary/80 text-sm">
-                        ¿Olvidaste tu contraseña?
-                      </a>
-                    </div>
-
-                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                      Iniciar Sesión
-                    </Button>
-                  </form>
-                </TabsContent>
-
-
-
-                {/* Admin Login Form */}
-                <TabsContent value="admin">
-                  <form onSubmit={handleAdminLogin} className="space-y-6">
-                    <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4">
-                      <div className="flex items-center gap-2 text-primary">
-                        <Shield size={18} />
-                        <span className="text-sm font-medium">Acceso Restringido</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Solo personal administrativo autorizado
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="admin-id" className="text-foreground flex items-center gap-2">
-                        <User size={16} />
-                        Identificación
-                      </Label>
-                      <Input
-                        id="admin-id"
-                        type="text"
-                        value={loginData.identification}
-                        onChange={(e) => setLoginData({ ...loginData, identification: e.target.value })}
-                        required
-                        placeholder="Tu identificación"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="admin-password" className="text-foreground flex items-center gap-2">
-                        <Lock size={16} />
-                        Contraseña
-                      </Label>
-                      <Input
-                        id="admin-password"
-                        type="password"
-                        value={loginData.password}
-                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                        required
-                        placeholder="••••••••"
-                        className="bg-input-background border-border text-foreground"
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {isLoading ? 'Verificando...' : 'Acceder al Panel'}
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+                </Button>
+              </form>
             </Card>
 
             {/* Security Badge */}

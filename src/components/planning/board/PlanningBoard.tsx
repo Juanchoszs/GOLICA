@@ -16,7 +16,13 @@ import { toast } from 'sonner';
 import { MousePointer2, Trash2 } from 'lucide-react';
 import type Konva from 'konva';
 
-export const PlanningBoard: React.FC = () => {
+interface PlanningBoardProps {
+  onSaveBoard?: (boardData: string, imageUri: string) => void;
+  onChange?: (boardData: string, imageUri: string) => void;
+  initialData?: string;
+}
+
+export const PlanningBoard: React.FC<PlanningBoardProps> = ({ onSaveBoard, onChange, initialData }) => {
   const {
     elements,
     lines,
@@ -25,16 +31,50 @@ export const PlanningBoard: React.FC = () => {
     removeElement,
     addLine,
     clearBoard,
-    saveBoard
+    saveBoard,
+    loadBoard
   } = useBoardState();
+
+  const lastSentData = useRef<string | null>(initialData || null);
+
+  React.useEffect(() => {
+    if (initialData) {
+      loadBoard(initialData);
+      lastSentData.current = initialData;
+    } else {
+      clearBoard();
+      lastSentData.current = null;
+    }
+  }, [initialData, loadBoard, clearBoard]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawingMode, setDrawingMode] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLine, setCurrentLine] = useState<number[]>([]);
-  
+
   const stageRef = useRef<Konva.Stage>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      const currentData = JSON.stringify({ elements, lines });
+      // Evitamos disparos infinitos o capturas innecesarias si el boardData no ha cambiado
+      if (currentData !== lastSentData.current && (elements.length > 0 || lines.length > 0)) {
+        if (stageRef.current) {
+          try {
+            const uri = stageRef.current.toDataURL();
+            lastSentData.current = currentData;
+            if (onChange) {
+              onChange(currentData, uri);
+            }
+          } catch (e) {
+            console.error('Error auto-capturing board picture', e);
+          }
+        }
+      }
+    }, 600); // Debounce de 600ms para no saturar 
+    return () => clearTimeout(timer);
+  }, [elements, lines, onChange]);
 
   // Dimensions
   const stageWidth = 800;
@@ -97,21 +137,27 @@ export const PlanningBoard: React.FC = () => {
 
   const handleSaveJSON = () => {
     saveBoard();
-    exportBoardToJSON(elements, lines);
-    toast.success("JSON exportado");
+    if (onSaveBoard && stageRef.current) {
+      const uri = stageRef.current.toDataURL();
+      const boardData = JSON.stringify({ elements, lines });
+      onSaveBoard(boardData, uri);
+    } else {
+      exportBoardToJSON(elements, lines);
+      toast.success("JSON exportado localmente");
+    }
   };
 
   return (
     <div className="flex h-[600px] w-full border rounded-xl overflow-hidden bg-background shadow-2xl" ref={containerRef}>
-      <Toolbox 
-        onAddElement={(type, color) => addElement(type, stageWidth/2, stageHeight/2, color)}
+      <Toolbox
+        onAddElement={(type, color) => addElement(type, stageWidth / 2, stageHeight / 2, color)}
         onClear={clearBoard}
         onSave={handleSaveJSON}
         onExport={handleExport}
         drawingMode={drawingMode}
         setDrawingMode={setDrawingMode}
       />
-      
+
       <div className="flex-1 bg-zinc-900 flex items-center justify-center p-8 relative overflow-hidden">
         <div className="shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden border-4 border-zinc-800">
           <Stage
@@ -128,20 +174,20 @@ export const PlanningBoard: React.FC = () => {
           >
             <Layer>
               <Field width={stageWidth} height={stageHeight} />
-              
+
               {/* Elements */}
               {elements.map((el) => {
                 if (el.type === 'player') {
                   return (
-                    <Player 
-                      key={el.id} 
-                      element={el} 
+                    <Player
+                      key={el.id}
+                      element={el}
                       onSelect={() => setSelectedId(el.id)}
                       onDragEnd={(e) => {
                         const target = e.target as Konva.Group;
                         updateElement(el.id, { x: target.x(), y: target.y() });
                       }}
-                      onDoubleClick={() => {
+                      onDelete={() => {
                         removeElement(el.id);
                         toast.success("Jugador eliminado");
                       }}
@@ -150,15 +196,15 @@ export const PlanningBoard: React.FC = () => {
                 }
                 if (el.type === 'cone') {
                   return (
-                    <Cone 
-                      key={el.id} 
-                      element={el} 
+                    <Cone
+                      key={el.id}
+                      element={el}
                       onSelect={() => setSelectedId(el.id)}
                       onDragEnd={(e) => {
                         const target = e.target as Konva.Group;
                         updateElement(el.id, { x: target.x(), y: target.y() });
                       }}
-                      onDoubleClick={() => {
+                      onDelete={() => {
                         removeElement(el.id);
                         toast.success("Cono eliminado");
                       }}
@@ -167,15 +213,28 @@ export const PlanningBoard: React.FC = () => {
                 }
                 if (el.type === 'goal') {
                   return (
-                    <MiniGoal 
-                      key={el.id} 
-                      element={el} 
+                    <MiniGoal
+                      key={el.id}
+                      element={el}
+                      isSelected={selectedId === el.id}
                       onSelect={() => setSelectedId(el.id)}
                       onDragEnd={(e) => {
                         const target = e.target as Konva.Group;
                         updateElement(el.id, { x: target.x(), y: target.y() });
                       }}
+                      onTransformEnd={(data) => {
+                        updateElement(el.id, {
+                          x: data.x,
+                          y: data.y,
+                          scaleX: data.scaleX,
+                          scaleY: data.scaleY,
+                          rotation: data.rotation
+                        });
+                      }}
                       onDoubleClick={() => {
+                        updateElement(el.id, { rotation: (el.rotation || 0) + 90 });
+                      }}
+                      onDelete={() => {
                         removeElement(el.id);
                         toast.success("Portería eliminada");
                       }}
@@ -184,8 +243,8 @@ export const PlanningBoard: React.FC = () => {
                 }
                 if (el.type === 'zone') {
                   return (
-                    <Zone 
-                      key={el.id} 
+                    <Zone
+                      key={el.id}
                       element={el}
                       isSelected={selectedId === el.id}
                       onSelect={() => setSelectedId(el.id)}
@@ -202,20 +261,27 @@ export const PlanningBoard: React.FC = () => {
                           rotation: data.rotation
                         });
                       }}
+                      onDoubleClick={() => {
+                        updateElement(el.id, { rotation: (el.rotation || 0) + 90 });
+                      }}
+                      onDelete={() => {
+                        removeElement(el.id);
+                        toast.success("Zona eliminada");
+                      }}
                     />
                   );
                 }
                 if (el.type === 'stake') {
                   return (
-                    <Stake 
-                      key={el.id} 
-                      element={el} 
+                    <Stake
+                      key={el.id}
+                      element={el}
                       onSelect={() => setSelectedId(el.id)}
                       onDragEnd={(e) => {
                         const target = e.target as Konva.Group;
                         updateElement(el.id, { x: target.x(), y: target.y() });
                       }}
-                      onDoubleClick={() => {
+                      onDelete={() => {
                         removeElement(el.id);
                         toast.success("Estaca eliminada");
                       }}
@@ -224,15 +290,15 @@ export const PlanningBoard: React.FC = () => {
                 }
                 if (el.type === 'ladder') {
                   return (
-                    <CoordinationLadder 
-                      key={el.id} 
-                      element={el} 
+                    <CoordinationLadder
+                      key={el.id}
+                      element={el}
                       onSelect={() => setSelectedId(el.id)}
                       onDragEnd={(e) => {
                         const target = e.target as Konva.Group;
                         updateElement(el.id, { x: target.x(), y: target.y() });
                       }}
-                      onDoubleClick={() => {
+                      onDelete={() => {
                         removeElement(el.id);
                         toast.success("Escalera coordinativa eliminada");
                       }}
@@ -241,15 +307,15 @@ export const PlanningBoard: React.FC = () => {
                 }
                 if (el.type === 'ball') {
                   return (
-                    <Ball 
-                      key={el.id} 
-                      element={el} 
+                    <Ball
+                      key={el.id}
+                      element={el}
                       onSelect={() => setSelectedId(el.id)}
                       onDragEnd={(e) => {
                         const target = e.target as Konva.Group;
                         updateElement(el.id, { x: target.x(), y: target.y() });
                       }}
-                      onDoubleClick={() => {
+                      onDelete={() => {
                         removeElement(el.id);
                         toast.success("Balón eliminado");
                       }}
@@ -261,31 +327,21 @@ export const PlanningBoard: React.FC = () => {
 
               {/* Lines */}
               {lines.map(line => <TacticalLine key={line.id} line={line} />)}
-              
+
               {/* Current Drawing Line */}
               {drawingMode && currentLine.length >= 4 && (
-                <TacticalLine 
-                  line={{ 
-                    id: 'current', 
-                    points: currentLine, 
-                    color: 'rgba(255,255,255,0.5)', 
+                <TacticalLine
+                  line={{
+                    id: 'current',
+                    points: currentLine,
+                    color: 'rgba(255,255,255,0.5)',
                     type: 'pass',
                     dash: [5, 5]
-                  }} 
+                  }}
                 />
               )}
             </Layer>
           </Stage>
-        </div>
-
-        {/* Instructions Overlay */}
-        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-md px-4 py-2 rounded-lg border border-white/20 flex flex-col gap-1.5 pointer-events-none">
-          <div className="flex items-center gap-2 whitespace-nowrap">
-            <MousePointer2 size={14} className="text-emerald-400" />
-            <span className="text-xs text-white font-medium">
-              {drawingMode ? "Arrastra: dibujar | Doble-Click: cancelar" : "Drag: mover | Doble-Click: eliminar"}
-            </span>
-          </div>
         </div>
       </div>
     </div>

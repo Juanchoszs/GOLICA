@@ -16,16 +16,35 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [players, setPlayers] = useState<Player[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
 
-  // Define todos los posibles valores de categorías si no se pasan
-  const allCategoriesAvailable = ['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'];
-  
-  // Si allowedCategories es nulo, indefinido o vacío, usamos todas las categorías.
-  // Pero ojo: si es un array vacío, tal vez el coach NO TIENE categorías.
-  // Sin embargo, para mayor robustez, si no se especifica, mostramos el listado completo o lo permitido.
-  const categories = allowedCategories && allowedCategories.length > 0 
-    ? allCategoriesAvailable.filter(c => allowedCategories.includes(c))
-    : allCategoriesAvailable;
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .order('name');
+
+      if (error) throw error;
+
+      const categoryNames = (data || []).map(c => c.name);
+      setAllCategories(categoryNames);
+
+      if (allowedCategories && allowedCategories.length > 0) {
+        setCategories(categoryNames.filter(c => allowedCategories.includes(c)));
+      } else {
+        setCategories(categoryNames);
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      toast.error('Error al cargar categorías');
+    }
+  };
 
   // Load players for the selected category
   const loadPlayers = async (category: string) => {
@@ -118,8 +137,8 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
 
   if (view === 'board') {
     return (
-      <TacticalBoard 
-        players={players} 
+      <TacticalBoard
+        players={players}
         categoryName={selectedCategory}
         onSave={handleSaveCallUp}
         onClose={() => setView('list')}
@@ -140,10 +159,10 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
         {categories.map((cat) => (
           <Card key={cat} className="p-6 hover:border-primary/50 transition-all cursor-pointer group" onClick={() => loadPlayers(cat)}>
             <div className="flex items-center justify-between mb-4">
-               <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                 <Users className="text-primary" size={24} />
-               </div>
-               <ChevronRight className="text-muted-foreground group-hover:text-primary transition-colors" />
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                <Users className="text-primary" size={24} />
+              </div>
+              <ChevronRight className="text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
             <h3 className="text-xl font-bold mb-4">{cat}</h3>
           </Card>

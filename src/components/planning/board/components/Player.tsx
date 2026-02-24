@@ -1,15 +1,18 @@
 import React from 'react';
 import { Group, Circle, Text } from 'react-konva';
 import { BoardElement } from '../types/board.types';
+import { useLongPress } from '../hooks/useLongPress';
 
 interface PlayerProps {
   element: BoardElement;
   onDragEnd: (e: any) => void;  // Konva event type
   onSelect: () => void;
-  onDoubleClick: () => void;
+  onDelete: () => void;
 }
 
-export const Player: React.FC<PlayerProps> = ({ element, onDragEnd, onSelect, onDoubleClick }) => {
+export const Player: React.FC<PlayerProps> = ({ element, onDragEnd, onSelect, onDelete }) => {
+  const longPressProps = useLongPress(() => onDelete?.());
+
   return (
     <Group
       x={element.x}
@@ -18,8 +21,7 @@ export const Player: React.FC<PlayerProps> = ({ element, onDragEnd, onSelect, on
       onDragEnd={onDragEnd}
       onClick={onSelect}
       onTap={onSelect}
-      onDblClick={onDoubleClick}
-      onDoubleClick={onDoubleClick}
+      {...longPressProps}
     >
       <Circle
         radius={15}

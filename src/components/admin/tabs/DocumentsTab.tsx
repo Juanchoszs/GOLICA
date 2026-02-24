@@ -11,6 +11,26 @@ interface DocumentsTabProps {
 }
 
 export function DocumentsTab({ editedPlayer, player, setEditingImage }: DocumentsTabProps) {
+  const handleUploadClick = (field: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e: any) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setEditingImage({
+            url: event.target?.result as string,
+            field
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+    input.click();
+  };
+
   const handleDownloadDocuments = async () => {
     const toastId = toast.loading('Generando PDF...');
     try {
@@ -18,13 +38,13 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
         toast.error('Faltan documentos para descargar', { id: toastId });
         return;
       }
-      
+
       await downloadPlayerDocuments(
         player.name,
         editedPlayer.id_card_front_url,
         editedPlayer.id_card_back_url
       );
-      
+
       toast.success('Documentos descargados exitosamente', { id: toastId });
     } catch (error) {
       console.error('Error downloading documents:', error);
@@ -72,7 +92,7 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
                   )}
                 </div>
               </div>
-              <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
+              <div className="aspect-[1.6/1] w-full relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => !editedPlayer.id_card_front_url && handleUploadClick('id_card_front_url')}>
                 {editedPlayer.id_card_front_url ? (
                   <img
                     src={editedPlayer.id_card_front_url}
@@ -80,7 +100,10 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
                     className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
-                  <p className="text-muted-foreground text-xs italic">No cargado</p>
+                  <div className="flex flex-col items-center">
+                    <Shield className="text-muted-foreground mb-2" size={24} />
+                    <p className="text-muted-foreground text-xs italic">Clic para subir frontal</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -105,7 +128,7 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
                   )}
                 </div>
               </div>
-              <div className="aspect-[1.6/1] relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
+              <div className="aspect-[1.6/1] w-full relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => !editedPlayer.id_card_back_url && handleUploadClick('id_card_back_url')}>
                 {editedPlayer.id_card_back_url ? (
                   <img
                     src={editedPlayer.id_card_back_url}
@@ -113,7 +136,10 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
                     className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
-                  <p className="text-muted-foreground text-xs italic">No cargado</p>
+                  <div className="flex flex-col items-center">
+                    <Shield className="text-muted-foreground mb-2" size={24} />
+                    <p className="text-muted-foreground text-xs italic">Clic para subir posterior</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -147,9 +173,17 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
         <div className="flex flex-col items-center justify-center h-full py-12 text-center">
           <Shield size={48} className="text-primary mx-auto mb-4 opacity-30" />
           <h3 className="text-lg font-bold mb-2 text-foreground">Gestión de Documentos</h3>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto">
+          <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6">
             El jugador aún no ha cargado los archivos de su tarjeta de identidad.
           </p>
+          <div className="flex gap-4">
+            <Button onClick={() => handleUploadClick('id_card_front_url')} className="bg-primary hover:bg-primary/90">
+              Subir Lado Frontal
+            </Button>
+            <Button onClick={() => handleUploadClick('id_card_back_url')} variant="outline">
+              Subir Lado Posterior
+            </Button>
+          </div>
         </div>
       )}
     </Card>

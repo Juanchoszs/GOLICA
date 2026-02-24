@@ -3,12 +3,13 @@ import { Button } from '../ui/button';
 import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield, CalendarDays, BookOpen } from 'lucide-react';
 import { CallUpManager } from '../convocatorias/CallUpManager';
 import { PlayersManagement } from './PlayersManagement';
-import { SessionsManagement } from './SessionsManagement';
 import { CoachDashboard } from '../coach/CoachDashboard';
 import { CoachesManagement } from './CoachesManagement';
+import { CategoriesManagement } from './CategoriesManagement';
 import { useTheme } from '../ThemeContext';
 import { PlanningList } from '../planning/PlanningList';
 import { PlanningBuilder } from '../planning/PlanningBuilder';
+import { PlanningSessionView } from '../planning/PlanningSessionView';
 
 interface AdminPanelProps {
   user: any;
@@ -26,12 +27,11 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
 
   const menuItems = [
     { id: 'jugadores', label: 'Jugadores', icon: Users, available: true },
-    { id: 'gestion-entrenadores', label: 'Entrenadores', icon: Shield, available: true },
     { id: 'entrenador', label: 'Convocatorias', icon: UserCog, available: true },
-    { id: 'sesiones-entrenamientos', label: 'Sesiones', icon: BookOpen, available: true },
     { id: 'planificaciones', label: 'Planificaciones', icon: CalendarDays, available: true },
+    { id: 'gestion-entrenadores', label: 'Gestión Entrenadores', icon: Shield, available: true },
+    { id: 'administrativo', label: 'Gestión Categorías', icon: Settings, available: true },
     { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: false },
-    { id: 'administrativo', label: 'Administrativo', icon: Settings, available: false },
   ];
 
   const renderContent = () => {
@@ -42,33 +42,36 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
         return <CoachesManagement />;
       case 'entrenador':
         return <CallUpManager allowedCategories={user.assigned_categories} />;
-      case 'sesiones-entrenamientos':
-        return <SessionsManagement />;
       case 'planificaciones':
         return (
-            <div className="p-6">
-                {planningView === 'list' && (
-                    <PlanningList 
-                        userRole="admin" 
-                        userId={user.id} 
-                        onCreateNew={() => { setSelectedSession(null); setPlanningView('create'); }}
-                        onEdit={(session) => { setSelectedSession(session); setPlanningView('edit'); }}
-                    />
-                )}
-                {(planningView === 'create' || planningView === 'edit') && (
-                    <PlanningBuilder 
-                        coachId={selectedSession?.coach_id || user.id} 
-                        initialData={selectedSession}
-                        onSave={() => setPlanningView('list')}
-                        onCancel={() => setPlanningView('list')}
-                    />
-                )}
-            </div>
+          <div className="p-6">
+            {planningView === 'list' && (
+              <PlanningList
+                userRole="admin"
+                userId={user.id}
+                onCreateNew={() => { setSelectedSession(null); setPlanningView('create'); }}
+                onEdit={(session) => { setSelectedSession(session); setPlanningView('edit'); }}
+              />
+            )}
+            {planningView === 'create' && (
+              <PlanningBuilder
+                coachId={user.id}
+                onSave={() => setPlanningView('list')}
+                onCancel={() => setPlanningView('list')}
+              />
+            )}
+            {planningView === 'edit' && selectedSession && (
+              <PlanningSessionView
+                session={selectedSession}
+                onBack={() => setPlanningView('list')}
+              />
+            )}
+          </div>
         );
       case 'fisioterapia':
         return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo de Fisioterapia - Próximamente</h2></div>;
       case 'administrativo':
-        return <CoachesManagement />;
+        return <CategoriesManagement />;
       default:
         return <PlayersManagement user={user} />;
     }
@@ -125,15 +128,15 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
                 key={item.id}
                 variant={activeSection === item.id ? 'default' : 'ghost'}
                 className={`w-full justify-start ${activeSection === item.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-muted'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-foreground hover:bg-muted'
                   } ${!item.available ? 'opacity-50 cursor-not-allowed' : ''}`}
                 onClick={() => {
-                    if (item.available) {
-                        setActiveSection(item.id);
-                        // Reset sub-view state when switching main tabs
-                        if (item.id === 'planificaciones') setPlanningView('list');
-                    }
+                  if (item.available) {
+                    setActiveSection(item.id);
+                    // Reset sub-view state when switching main tabs
+                    if (item.id === 'planificaciones') setPlanningView('list');
+                  }
                 }}
                 disabled={!item.available}
               >

@@ -3,7 +3,7 @@ import { TrainingSession } from '../types/session.types';
 import { useTrainingSession } from '../hooks/useTrainingSession';
 import { WarmupSectionComponent } from './WarmupSection';
 import { MainSectionComponent } from './MainSection';
-import { PlanningBoard } from '../../planing';
+import { PlanningBoard } from '../board';
 import { Button } from '../../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Input } from '../../ui/input';
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/select';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -24,7 +24,7 @@ import {
 } from '../../ui/dialog';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../utils/supabase/client';
-import { saveAsTemplate } from '../../../utils/supabase/trainingSessionsService';
+import { uploadBoardImage } from '../../../utils/supabase/trainingSessionsService';
 import { toast } from 'sonner';
 import { Save, X, BookmarkPlus } from 'lucide-react';
 
@@ -57,10 +57,6 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [categories, setCategories] = useState<Array<any>>([]);
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [templateDescription, setTemplateDescription] = useState('');
-  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // Initialize categories from props or fetch them
   useEffect(() => {
@@ -75,19 +71,35 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
 
   const fetchCoachCategories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('coaches')
-        .select('assigned_categories')
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
         .eq('id', user?.id)
         .single();
 
-      if (error) {
-        console.error('Error fetching categories:', error);
-        return;
-      }
-      
-      if (data?.assigned_categories && Array.isArray(data.assigned_categories)) {
-        setCategories(data.assigned_categories);
+      if (profile?.role === 'admin') {
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name')
+          .order('name');
+
+        if (error) throw error;
+        setCategories(data.map(c => c.name));
+      } else {
+        const { data, error } = await supabase
+          .from('coaches')
+          .select('assigned_categories')
+          .eq('id', user?.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return;
+        }
+
+        if (data?.assigned_categories && Array.isArray(data.assigned_categories)) {
+          setCategories(data.assigned_categories);
+        }
       }
     } catch (error) {
       console.error('Error fetching coach categories:', error);
@@ -110,49 +122,16 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
     setActiveTab('tactic');
   };
 
-  const handleTacticBoardSave = (boardData: string) => {
+  const handleBoardChange = (boardData: string, imageUri: string) => {
     if (selectedExerciseId) {
-      updateMainExercise(selectedExerciseId, { tacticBoardData: boardData });
-    }
-  };
-
-  const handleSaveAsTemplate = async () => {
-    if (!templateName.trim()) {
-      toast.error('Por favor, ingresa un nombre para la plantilla');
-      return;
-    }
-
-    if (!user?.id) {
-      toast.error('Debes estar conectado para guardar plantillas');
-      return;
-    }
-
-    setSavingTemplate(true);
-    try {
-      const result = await saveAsTemplate(user.id, {
-        name: templateName,
-        description: templateDescription,
-        categoryName: selectedCategory || undefined,
-        warmupExercises: session.warmup.exercises,
-        mainExercises: session.main.exercises,
-        boardTemplate: []
+      updateMainExercise(selectedExerciseId, {
+        tacticBoardData: boardData,
+        tacticBoardImageBase64: imageUri
       });
-
-      if (result.success) {
-        toast.success('Plantilla guardada exitosamente');
-        setTemplateDialogOpen(false);
-        setTemplateName('');
-        setTemplateDescription('');
-      } else {
-        toast.error(result.error || 'Error al guardar la plantilla');
-      }
-    } catch (error) {
-      console.error('Error saving template:', error);
-      toast.error('Error al guardar la plantilla');
-    } finally {
-      setSavingTemplate(false);
     }
   };
+
+  // Save as template logic removed because the feature is merged into the general sessions now.
 
   return (
     <div className="w-full h-full flex flex-col bg-background">
@@ -217,58 +196,7 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-2 ml-4">
-          <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <BookmarkPlus size={16} />
-                Guardar como Plantilla
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Guardar como Plantilla</DialogTitle>
-                <DialogDescription>
-                  Guarda esta sesión como plantilla reutilizable para futuros entrenamientos
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Nombre de la plantilla *</label>
-                  <Input
-                    placeholder="Ej: Entrenamiento Técnico Ofensivo"
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                     className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Descripción (opcional)</label>
-                  <Input
-                    placeholder="Descripción corta de la plantilla..."
-                    value={templateDescription}
-                    onChange={(e) => setTemplateDescription(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-                <div className="flex gap-3 justify-end pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setTemplateDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSaveAsTemplate}
-                    disabled={savingTemplate || !templateName.trim()}
-                    className="gap-2"
-                  >
-                    <BookmarkPlus size={16} />
-                    {savingTemplate ? 'Guardando...' : 'Guardar Plantilla'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+
           {onCancel && (
             <Button variant="outline" onClick={onCancel} className="gap-2">
               <X size={16} />
@@ -358,7 +286,11 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
                   </p>
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <PlanningBoard />
+                  <PlanningBoard
+                    onSaveBoard={() => { }}
+                    onChange={handleBoardChange}
+                    initialData={session.main.exercises.find((ex) => ex.id === selectedExerciseId)?.tacticBoardData}
+                  />
                 </div>
               </div>
             ) : (

@@ -15,17 +15,26 @@ interface Player {
   email: string;
   phone: string;
   category: string;
+  initial_password?: string;
   birthDate?: string;
   position?: string;
   description?: string;
+  previous_team?: string;
   status: string;
   registeredAt: string;
   photo_url?: string;
+  id_card_front_url?: string;
+  id_card_back_url?: string;
   performance?: {
     training: number;
     matchGoals: number;
     matchAssists: number;
   };
+  weight?: string;
+  height?: string;
+  tournaments?: any[];
+  injuries?: any[];
+  tests?: any[];
 }
 
 interface PlayersManagementProps {
@@ -42,11 +51,24 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
   const [showRegistration, setShowRegistration] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
+  const [categories, setCategories] = useState<string[]>(['Todas']);
+
   useEffect(() => {
     loadPlayers();
+    fetchCategories();
   }, []);
 
-  const categories = ['Todas', 'Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'];
+  async function fetchCategories() {
+    try {
+      const { data, error } = await supabase.from('categories').select('name').order('name');
+      if (error) throw error;
+      if (data) {
+        setCategories(['Todas', ...data.map(c => c.name)]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }
 
   useEffect(() => {
     let filtered = players;
@@ -55,14 +77,14 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
       filtered = filtered.filter(
         (player) =>
           player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          player.identification.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          player.email.toLowerCase().includes(searchTerm.toLowerCase())
+          (player.identification && player.identification.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (player.email && player.email.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
     if (selectedCategory !== 'Todas') {
       filtered = filtered.filter(
-        (player) => player.category?.includes(selectedCategory)
+        (player) => player.category === selectedCategory
       );
     }
 
@@ -72,24 +94,74 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
   const loadPlayers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Load from profiles first (authoritative for name/email/identification)
+      // This prevents an empty list if the `players` row is missing or blocked by RLS.
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, identification, phone, initial_password, role, created_at')
+        .eq('role', 'player')
+        .order('name');
+
+      if (profilesError) throw profilesError;
+
+      // Try loading `players` extra fields. If it fails (RLS/permissions), we still show profiles.
+      const { data: playersData, error: playersError } = await supabase
         .from('players')
-        .select('*')
-        .order('registered_at', { ascending: false });
+        .select('id, category, position, status, birth_date, photo_url, id_card_front_url, id_card_back_url, performance, previous_team, description, weight, height, tournaments, injuries, tests')
+        .order('id');
 
-      if (error) throw error;
+      if (playersError) {
+        console.warn('Warning loading players table (continuing with profiles only):', playersError);
+        toast.warning('No se pudo leer la tabla players (posible RLS/permisos). Se mostrará la lista, pero faltarán campos como posición, fecha de nacimiento, procedencia y descripción.');
+      }
 
-      const formattedPlayers = (data || []).map(p => ({
-        ...p,
-        birthDate: p.birth_date, // Mapping database snake_case to component camelCase
-        registeredAt: p.registered_at
-      }));
+      const playersById = new Map((playersData || []).map((p: any) => [p.id, p]));
+
+      const safeParse = (val: any, fallback: any) => {
+        if (!val) return fallback;
+        if (typeof val === 'string') {
+          try {
+            return JSON.parse(val);
+          } catch (e) {
+            return fallback;
+          }
+        }
+        return val;
+      };
+
+      const formattedPlayers: Player[] = (profilesData || []).map((profile: any) => {
+        const p = playersById.get(profile.id) || {};
+        return {
+          id: profile.id,
+          name: profile.name || 'Sin nombre',
+          email: profile.email || 'Sin email',
+          identification: profile.identification || '',
+          phone: profile.phone || '',
+          initial_password: profile.initial_password,
+          category: p.category || '',
+          position: p.position || '',
+          previous_team: p.previous_team || '',
+          description: p.description || '',
+          status: p.status || 'active',
+          registeredAt: profile.created_at || new Date().toISOString(),
+          birthDate: p.birth_date || '',
+          photo_url: p.photo_url || '',
+          id_card_front_url: p.id_card_front_url || '',
+          id_card_back_url: p.id_card_back_url || '',
+          performance: safeParse(p.performance, { training: 0, matchGoals: 0, matchAssists: 0 }),
+          weight: p.weight || '',
+          height: p.height || '',
+          tournaments: safeParse(p.tournaments, []),
+          injuries: safeParse(p.injuries, []),
+          tests: safeParse(p.tests, []),
+        };
+      });
 
       setPlayers(formattedPlayers);
       setFilteredPlayers(formattedPlayers);
     } catch (error) {
       console.error('Error loading players:', error);
-      toast.error('Error al conectar con el servidor');
+      toast.error('Error al cargar la lista de jugadores');
     } finally {
       setIsLoading(false);
     }
@@ -104,16 +176,34 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
     const toastId = toast.loading('Eliminando jugador...');
 
     try {
-      // 1. Delete actual player record (Database)
-      const { error } = await supabase
-        .from('players')
-        .delete()
-        .eq('id', playerId);
+      // 1. Call Edge Function to delete user from Auth and all related records
+      const { data, error: deleteAuthError } = await supabase.functions.invoke('admin-delete-user', {
+        body: {
+          userId: playerId
+        }
+      });
 
-      if (error) throw error;
+      if (deleteAuthError) {
+        console.error('Error invoking delete function:', deleteAuthError);
+        // If function not available, fallback to manual deletion
+        if (deleteAuthError.message?.includes('Failed to send a request') || deleteAuthError.status === 404) {
+          toast.warning('Función de eliminación no disponible. Eliminando solo de la base de datos...', { id: toastId });
 
-      // 2. Attempt to cleanup storage (Optional/Best Effort)
-      // We don't block UI on this, just fire and forget or log errors
+          // Fallback: Delete from players table only
+          const { error } = await supabase
+            .from('players')
+            .delete()
+            .eq('id', playerId);
+
+          if (error) throw error;
+        } else {
+          throw deleteAuthError;
+        }
+      } else if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      // 2. Cleanup storage (Best Effort - don't block UI on this)
       const cleanupStorage = async () => {
         try {
           const { data: files } = await supabase.storage.from('player-documents').list(`${playerId}/`);
@@ -298,8 +388,8 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 bg-primary/20 border-2 border-primary/30 rounded-full flex items-center justify-center overflow-hidden">
                     {player.photo_url ? (
-                      <img 
-                        src={player.photo_url} 
+                      <img
+                        src={player.photo_url}
                         alt={player.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -333,6 +423,11 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
                   <p className="text-muted-foreground break-all">
                     <span className="font-medium">Email:</span> {player.email}
                   </p>
+                  {player.initial_password && (
+                    <p className="text-muted-foreground">
+                      <span className="font-medium">Pass:</span> <code className="bg-muted px-1 rounded">{player.initial_password}</code>
+                    </p>
+                  )}
                   <p className="text-muted-foreground">
                     <span className="font-medium">Categoría:</span> {player.category}
                   </p>

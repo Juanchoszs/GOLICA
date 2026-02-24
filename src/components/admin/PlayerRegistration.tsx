@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -20,9 +20,28 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
     birthDate: '',
     category: '',
     position: '',
+    previous_team: '',
+    description: '',
   });
+  const [categories, setCategories] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ email: string, password: string } | null>(null);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  async function fetchCategories() {
+    try {
+      const { data, error } = await supabase.from('categories').select('name').order('name');
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setCategories(data.map(c => c.name));
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  }
 
   const generateSecurePassword = (name: string, id: string) => {
     // 1. First word of name, capitalized
@@ -54,40 +73,49 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
 
     setIsSubmitting(true);
 
-    // Generate credentials
     const password = generateSecurePassword(formData.name, formData.identification);
 
-    console.log('Generating player with password:', password); // Debug log (safe in client-side creation context)
-
     try {
-      const { data, error } = await supabase
-        .from('players')
-        .insert([{
-          name: formData.name,
-          identification: formData.identification,
+      // Usar la función de Supabase para crear el usuario de forma segura
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
           email: formData.email,
+          password: password,
+          name: formData.name,
+          role: 'player',
+          identification: formData.identification,
           phone: formData.phone,
-          birth_date: formData.birthDate || null,
           category: formData.category,
           position: formData.position || null,
-          password: password, // Generated password
-          status: 'active'
-        }])
-        .select()
-        .single();
+          birth_date: formData.birthDate || null,
+          previous_team: formData.previous_team || null,
+          description: formData.description || null,
+        }
+      });
 
       if (error) {
-        if (error.code === '23505') {
-          toast.error('Ya existe un jugador con esta identificación o email');
+        console.error('❌ Error invoking function:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+
+        // Handle network/404 errors with better advice
+        if (error.message?.includes('Failed to send a request') || error.status === 404) {
+          toast.error('Error: La Función Edge no está desplegada o es inalcanzable.', {
+            duration: 6000
+          });
         } else {
-          throw error;
+          toast.error('Error al registrar: ' + (error.message || 'Error desconocido'));
         }
+        return;
+      }
+
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        toast.error('Error del servidor: ' + data.error);
         return;
       }
 
       toast.success('¡Jugador registrado exitosamente!');
 
-      // Show credentials view
       setCreatedCredentials({
         email: formData.email,
         password: password
@@ -139,9 +167,9 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Contraseña Generada</label>
+              <label className="text-xs text-muted-foreground">Contraseña Temporal</label>
               <div className="flex gap-2">
-                <code className="flex-1 bg-background border border-border px-3 py-2 rounded-lg text-sm font-mono text-primary font-bold">
+                <code className="flex-1 bg-background border border-border px-3 py-2 rounded-lg text-sm font-mono text-foreground break-all">
                   {createdCredentials.password}
                 </code>
                 <Button variant="outline" size="icon" onClick={() => copyToClipboard(createdCredentials.password)}>
@@ -149,6 +177,13 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
                 </Button>
               </div>
             </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg mt-4">
+              <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
+                ℹ️ <strong>Nota:</strong> La gestión de accesos y contraseñas ahora se maneja centralizadamente a través de Supabase Auth.
+              </p>
+            </div>
+
 
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg mt-4">
               <p className="text-xs text-yellow-600 dark:text-yellow-400 leading-relaxed">
@@ -264,6 +299,26 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
                     className="bg-input-background border-border text-foreground"
                   />
                 </div>
+
+                <div>
+                  <Label className="text-foreground">Equipo de Procedencia</Label>
+                  <Input
+                    value={formData.previous_team}
+                    onChange={(e) => setFormData({ ...formData, previous_team: e.target.value })}
+                    placeholder="Ej: Club Deportivo X"
+                    className="bg-input-background border-border text-foreground"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-foreground">Descripción</Label>
+                  <Input
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Breve descripción del jugador"
+                    className="bg-input-background border-border text-foreground"
+                  />
+                </div>
               </div>
             </Card>
 
@@ -276,22 +331,27 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
                     Categorías <span className="text-red-500">*</span> (Selecciona una o varias)
                   </Label>
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    {['Sub-8', 'Sub-10', 'Sub-12', 'Sub-14', 'Sub-16', 'Sub-18', 'Sub-20', 'Sub-23'].map(cat => (
-                      <label key={cat} className="flex items-center gap-2 p-2 border border-border rounded-md hover:bg-muted/50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="rounded border-border text-primary"
-                          checked={formData.category.includes(cat)}
-                          onChange={(e) => {
-                            const newCats = e.target.checked
-                              ? (formData.category ? `${formData.category}, ${cat}` : cat)
-                              : formData.category.split(', ').filter((c: string) => c !== cat).join(', ');
-                            setFormData({ ...formData, category: newCats });
-                          }}
-                        />
-                        <span className="text-sm">{cat}</span>
-                      </label>
-                    ))}
+                    {categories.length > 0 ? (
+                      categories.map(cat => (
+                        <label key={cat} className="flex items-center gap-2 p-2 border border-border rounded-md hover:bg-muted/50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="rounded border-border text-primary"
+                            checked={formData.category.includes(cat)}
+                            onChange={(e) => {
+                              const currentCats = formData.category ? formData.category.split(', ') : [];
+                              const newCats = e.target.checked
+                                ? (formData.category ? [...currentCats, cat].join(', ') : cat)
+                                : currentCats.filter((c: string) => c !== cat).join(', ');
+                              setFormData({ ...formData, category: newCats });
+                            }}
+                          />
+                          <span className="text-sm">{cat}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic col-span-2">No hay categorías configuradas</p>
+                    )}
                   </div>
                 </div>
 

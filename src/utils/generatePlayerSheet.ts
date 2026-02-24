@@ -6,10 +6,29 @@ export const generatePlayerSheet = async (player: any) => {
     return;
   }
 
-  const calculateAge = (birthDate: string) => {
-    if (!birthDate) return 'N/A';
+  const parseField = (field: any, defaultValue: any = []) => {
+    if (!field) return defaultValue;
+    if (typeof field === 'string') {
+      try {
+        const cleaned = field.trim();
+        if (cleaned.startsWith('[') || cleaned.startsWith('{')) {
+          return JSON.parse(cleaned);
+        }
+        return field || defaultValue;
+      } catch (e) {
+        return field || defaultValue;
+      }
+    }
+    return field;
+  };
+
+  const calculateAge = (birth_date?: string, birthDate?: string) => {
+    const rawDate = birthDate || birth_date;
+    if (!rawDate) return 'N/A';
     const today = new Date();
-    const birth = new Date(birthDate);
+    const birth = new Date(rawDate);
+    if (isNaN(birth.getTime())) return 'N/A';
+
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -18,9 +37,10 @@ export const generatePlayerSheet = async (player: any) => {
     return `${age} años`;
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
     return date.toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'long',
@@ -28,13 +48,31 @@ export const generatePlayerSheet = async (player: any) => {
     });
   };
 
+  const parsedTournaments = parseField(player.tournaments, []);
+  const parsedInjuries = parseField(player.injuries, []);
+  const parsedPerformance = parseField(player.performance, { training: 0, matchGoals: 0, matchAssists: 0 });
+  const displayWeight = player.weight ? String(player.weight).replace(/[^\d.]/g, '') : '';
+  const displayHeight = player.height ? String(player.height).replace(/[^\d.]/g, '') : '';
+
   const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="es">
     <head>
       <meta charset="utf-8">
       <title>Ficha Técnica - ${player.name}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
       <style>
+        :root {
+          --primary: #10b981;
+          --primary-dark: #047857;
+          --secondary: #0f172a;
+          --accent: #f59e0b;
+          --text-main: #1e293b;
+          --text-muted: #64748b;
+          --bg-light: #f8fafc;
+          --border: #e2e8f0;
+        }
+
         @media print {
           @page {
             size: A4;
@@ -45,384 +83,594 @@ export const generatePlayerSheet = async (player: any) => {
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
           }
+          .page-content {
+            box-shadow: none !important;
+          }
         }
         
         * {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
+          font-family: 'Outfit', sans-serif;
         }
         
         body {
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          line-height: 1.5;
-          color: #1f2937;
-          background: white;
+          background: #e2e8f0;
+          padding: 20px;
+          display: flex;
+          justify-content: center;
+          color: var(--text-main);
         }
         
-        .page {
+        .page-content {
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
-          padding: 20mm;
           background: white;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        
+
+        /* Dekorativer Hintergrund */
+        .bg-pattern {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 350px;
+          background: linear-gradient(135deg, var(--secondary) 0%, #1e293b 100%);
+          z-index: 0;
+          overflow: hidden;
+        }
+
+        .bg-pattern::after {
+          content: '';
+          position: absolute;
+          bottom: -50px;
+          right: -50px;
+          width: 300px;
+          height: 300px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(16,185,129,0.15) 0%, rgba(255,255,255,0) 70%);
+        }
+
+        .bg-pattern::before {
+          content: '';
+          position: absolute;
+          top: -30px;
+          left: -30px;
+          width: 400px;
+          height: 400px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(255,255,255,0) 70%);
+        }
+
+        .main-container {
+          position: relative;
+          z-index: 10;
+          padding: 40px;
+        }
+
+        /* HEADER */
         .header {
           display: flex;
-          align-items: center;
           justify-content: space-between;
-          background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+          align-items: flex-start;
+          margin-bottom: 40px;
           color: white;
-          padding: 20px 30px;
-          border-radius: 12px;
-          margin-bottom: 25px;
-          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
         }
-        
-        .header-content {
-          flex: 1;
-        }
-        
-        .header h1 {
-          font-size: 28px;
-          font-weight: 700;
-          margin-bottom: 5px;
-          letter-spacing: -0.5px;
-        }
-        
-        .header p {
-          font-size: 14px;
-          opacity: 0.9;
-          font-weight: 500;
-        }
-        
-        .header-logo {
-          width: 90px;
-          height: 90px;
-        }
-        
-        .header-logo img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-        }
-        
-        .player-card {
+
+        .header-left {
           display: flex;
-          gap: 30px;
-          margin-bottom: 25px;
-          padding: 25px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
+          flex-direction: column;
         }
-        
-        .player-photo {
-          flex-shrink: 0;
+
+        .doc-title {
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 3px;
+          color: var(--primary);
+          font-weight: 700;
+          margin-bottom: 8px;
         }
-        
-        .player-photo img,
-        .player-photo .placeholder {
-          width: 130px;
-          height: 130px;
-          border-radius: 50%;
-          object-fit: cover;
-          border: 4px solid #10b981;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+        .club-name {
+          font-size: 32px;
+          font-weight: 900;
+          letter-spacing: 1px;
+          margin: 0;
+          line-height: 1;
         }
-        
-        .player-photo .placeholder {
+
+        .club-subtitle {
+          font-size: 14px;
+          color: #94a3b8;
+          font-weight: 400;
+          margin-top: 4px;
+        }
+
+        .logo-container {
+          width: 100px;
+          height: 100px;
+          background: white;
+          border-radius: 20px;
+          padding: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #e2e8f0;
-          font-size: 56px;
-          color: #94a3b8;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+          transform: rotate(3deg);
         }
-        
-        .player-details {
+
+        .logo-container img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+        }
+
+        /* HERO PROFILE CARD */
+        .hero-card {
+          background: white;
+          border-radius: 24px;
+          padding: 30px;
+          display: flex;
+          gap: 30px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+          margin-bottom: 40px;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          position: relative;
+        }
+
+        .hero-card::before {
+          content: '${player.position ? player.position.substring(0, 3).toUpperCase() : 'PLY'}';
+          position: absolute;
+          right: 20px;
+          top: -20px;
+          font-size: 120px;
+          font-weight: 900;
+          color: var(--primary);
+          opacity: 0.05;
+          line-height: 1;
+          z-index: 0;
+        }
+
+        .photo-wrapper {
+          position: relative;
+          z-index: 1;
+          flex-shrink: 0;
+        }
+
+        .photo-inner {
+          width: 160px;
+          height: 160px;
+          border-radius: 20px;
+          overflow: hidden;
+          border: 4px solid white;
+          box-shadow: 0 10px 20px rgba(16,185,129,0.2);
+          background: var(--bg-light);
+          position: relative;
+        }
+
+        .photo-inner img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .photo-placeholder {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 60px;
+          color: #cbd5e1;
+        }
+
+        .hero-details {
           flex: 1;
+          z-index: 1;
           display: flex;
           flex-direction: column;
           justify-content: center;
         }
-        
+
         .player-name {
-          font-size: 26px;
-          font-weight: 700;
-          color: #111827;
+          font-size: 36px;
+          font-weight: 800;
+          color: var(--secondary);
+          line-height: 1.1;
           margin-bottom: 15px;
-          letter-spacing: -0.5px;
         }
-        
-        .info-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-        }
-        
-        .info-box {
-          background: white;
-          padding: 10px 14px;
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
-        }
-        
-        .info-box .label {
-          font-size: 11px;
-          color: #64748b;
-          text-transform: uppercase;
-          font-weight: 600;
-          letter-spacing: 0.5px;
-          margin-bottom: 4px;
-        }
-        
-        .info-box .value {
-          font-size: 14px;
-          color: #1e293b;
-          font-weight: 600;
-          word-break: break-word;
-        }
-        
-        .section {
+
+        .player-tags {
+          display: flex;
+          gap: 10px;
           margin-bottom: 20px;
+          flex-wrap: wrap;
         }
-        
+
+        .tag {
+          padding: 6px 14px;
+          border-radius: 50px;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .tag-primary {
+          background: rgba(16, 185, 129, 0.1);
+          color: var(--primary-dark);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .tag-secondary {
+          background: var(--secondary);
+          color: white;
+        }
+
+        .hero-stats {
+          display: flex;
+          gap: 30px;
+          border-top: 1px solid var(--border);
+          padding-top: 15px;
+        }
+
+        .stat-item {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .stat-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          color: var(--text-muted);
+          font-weight: 600;
+          letter-spacing: 1px;
+        }
+
+        .stat-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--secondary);
+        }
+
+        /* GRID CONTENT */
+        .content-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 30px;
+        }
+
         .section-header {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 15px;
-          padding-bottom: 10px;
-          border-bottom: 2px solid #10b981;
+          margin-bottom: 20px;
         }
         
-        .section-header h3 {
+        .section-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: rgba(16, 185, 129, 0.15);
+          color: var(--primary-dark);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-right: 12px;
+          font-size: 16px;
+        }
+
+        .section-title {
           font-size: 18px;
           font-weight: 700;
-          color: #111827;
+          color: var(--secondary);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
         }
-        
-        .section-header .count {
-          background: #10b981;
-          color: white;
-          padding: 3px 10px;
-          border-radius: 20px;
-          font-size: 12px;
+
+        .info-card {
+          background: var(--bg-light);
+          border-radius: 16px;
+          padding: 25px;
+          border: 1px solid var(--border);
+          height: 100%;
+        }
+
+        .data-list {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+
+        .data-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-bottom: 12px;
+          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .data-item:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+
+        .data-label {
+          font-size: 13px;
+          color: var(--text-muted);
+          font-weight: 500;
+        }
+
+        .data-value {
+          font-size: 14px;
+          color: var(--secondary);
           font-weight: 600;
+          text-align: right;
+          max-width: 60%;
         }
-        
-        .description-box {
-          background: #f8fafc;
-          padding: 18px;
-          border-radius: 10px;
-          border: 1px solid #e2e8f0;
+
+        /* FULL WIDTH SECTION */
+        .full-section {
+          margin-top: 30px;
+          background: white;
+          border-radius: 16px;
+          padding: 25px;
+          border: 1px solid var(--border);
+        }
+
+        .description-text {
           font-size: 14px;
           line-height: 1.7;
           color: #475569;
+          font-weight: 400;
         }
-        
-        .grid-2 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 25px;
-        }
-        
-        .tournament-list {
+
+        /* LIST ITEMS */
+        .badge-list {
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
-        
-        .tournament-item {
+
+        .badge-item {
           display: flex;
           align-items: center;
-          gap: 12px;
-          background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+          background: white;
           padding: 12px 16px;
-          border-radius: 8px;
-          border: 1px solid #a7f3d0;
+          border-radius: 10px;
+          border-left: 4px solid var(--primary);
+          box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
-        
-        .tournament-item .icon {
+
+        .badge-item-icon {
+          margin-right: 12px;
           font-size: 18px;
         }
-        
-        .tournament-item .name {
+
+        .badge-item-content {
+          flex: 1;
+        }
+
+        .badge-item-title {
           font-size: 14px;
           font-weight: 600;
-          color: #065f46;
+          color: var(--secondary);
         }
-        
-        .injury-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        
-        .injury-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #fef2f2;
-          padding: 12px 16px;
-          border-radius: 8px;
-          border: 1px solid #fecaca;
-        }
-        
-        .injury-item .type {
-          font-size: 14px;
-          font-weight: 600;
-          color: #991b1b;
-        }
-        
-        .injury-item .date {
+
+        .badge-item-date {
           font-size: 12px;
-          color: #b91c1c;
-          background: white;
-          padding: 4px 10px;
-          border-radius: 20px;
+          color: var(--text-muted);
+          font-weight: 500;
         }
-        
+
         .empty-state {
           text-align: center;
-          padding: 30px;
+          padding: 30px 20px;
+          background: rgba(241, 245, 249, 0.5);
+          border-radius: 12px;
+          border: 2px dashed #cbd5e1;
           color: #94a3b8;
           font-size: 14px;
-          background: #f8fafc;
-          border-radius: 10px;
-          border: 2px dashed #e2e8f0;
+          font-weight: 500;
+        }
+
+        .footer {
+          position: absolute;
+          bottom: 30px;
+          left: 40px;
+          right: 40px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 20px;
+          border-top: 2px solid var(--bg-light);
+          font-size: 11px;
+          color: #94a3b8;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 1px;
         }
       </style>
     </head>
     <body>
-      <div class="page">
-        <div class="header">
-          <div class="header-content">
-            <h1>FICHA TÉCNICA DEL JUGADOR</h1>
-            <p>Club de Futbol GOLICA</p>
-          </div>
-          <div class="header-logo">
-            <img src="/logo.png" alt="GOLICA" onerror="this.parentElement.style.display='none'" />
-          </div>
-        </div>
+      <div class="page-content">
+        <div class="bg-pattern"></div>
         
-        <div class="player-card">
-          <div class="player-photo">
-            ${player.photo_url 
-              ? `<img src="${player.photo_url}" alt="${player.name}" onerror="this.outerHTML='<div class=\\'placeholder\\'>👤</div>'" />`
-              : `<div class="placeholder">👤</div>`
-            }
-          </div>
-          <div class="player-details">
-            <h2 class="player-name">${player.name}</h2>
-            <div class="info-grid">
-              <div class="info-box">
-                <div class="label">Identificación</div>
-                <div class="value">${player.identification}</div>
+        <div class="main-container">
+          <!-- HEADER -->
+          <header class="header">
+            <div class="header-left">
+              <div class="doc-title">Documento Oficial</div>
+              <h1 class="club-name">GOLICA PRO</h1>
+              <div class="club-subtitle">Ficha Técnica de Jugador Deportivo</div>
+            </div>
+            <div class="logo-container">
+              <img src="/logo.png" alt="GOLICA" onerror="this.parentElement.style.display='none'" />
+            </div>
+          </header>
+
+          <!-- HERO PROFILE -->
+          <div class="hero-card">
+            <div class="photo-wrapper">
+              <div class="photo-inner">
+                ${player.photo_url
+      ? `<img src="${player.photo_url}" alt="${player.name}" onerror="this.outerHTML='<div class=\\'photo-placeholder\\'>👤</div>'" />`
+      : `<div class="photo-placeholder">👤</div>`
+    }
               </div>
-              <div class="info-box">
-                <div class="label">Edad</div>
-                <div class="value">${calculateAge(player.birth_date)}</div>
+            </div>
+            
+            <div class="hero-details">
+              <h2 class="player-name">${player.name}</h2>
+              <div class="player-tags">
+                <span class="tag tag-secondary">${player.position || 'Sin Posición'}</span>
+                <span class="tag tag-primary">${player.category || 'Categoría N/A'}</span>
               </div>
-              <div class="info-box">
-                <div class="label">Peso</div>
-                <div class="value">${player.weight || 'N/A'}</div>
-              </div>
-              <div class="info-box">
-                <div class="label">Estatura</div>
-                <div class="value">${player.height || 'N/A'}</div>
-              </div>
-              <div class="info-box">
-                <div class="label">Categoría</div>
-                <div class="value">${player.category || 'N/A'}</div>
-              </div>
-              <div class="info-box">
-                <div class="label">Posición</div>
-                <div class="value">${player.position || 'N/A'}</div>
-              </div>
-              <div class="info-box">
-                <div class="label">Equipo Anterior</div>
-                <div class="value">${player.previous_team || 'N/A'}</div>
-              </div>
-              <div class="info-box">
-                <div class="label">Teléfono</div>
-                <div class="value">${player.phone}</div>
+              
+              <div class="hero-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Edad</span>
+                  <span class="stat-value">${calculateAge(player.birth_date, player.birthDate)}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Estatura</span>
+                  <span class="stat-value">${displayHeight ? displayHeight + 'm' : 'N/A'}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Peso</span>
+                  <span class="stat-value">${displayWeight ? displayWeight + 'kg' : 'N/A'}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        ${player.description ? `
-          <div class="section">
-            <div class="section-header">
-              <h3>📋 Descripción del Jugador</h3>
+
+          <!-- GRID -->
+          <div class="content-grid">
+            
+            <!-- COL 1: INFO -->
+            <div class="info-card">
+              <div class="section-header">
+                <div class="section-icon">📋</div>
+                <h3 class="section-title">Datos Personales</h3>
+              </div>
+              <div class="data-list">
+                <div class="data-item">
+                  <span class="data-label">Identificación</span>
+                  <span class="data-value">${player.identification}</span>
+                </div>
+                <div class="data-item">
+                  <span class="data-label">Fecha Nacimiento</span>
+                  <span class="data-value">${formatDate(player.birth_date || player.birthDate)}</span>
+                </div>
+                <div class="data-item">
+                  <span class="data-label">Teléfono</span>
+                  <span class="data-value">${player.phone || 'N/A'}</span>
+                </div>
+                <div class="data-item">
+                  <span class="data-label">Email</span>
+                  <span class="data-value" style="word-break: break-all;">${player.email || 'N/A'}</span>
+                </div>
+                <div class="data-item">
+                  <span class="data-label">Procedencia</span>
+                  <span class="data-value">${player.previous_team || 'Ingreso Directo'}</span>
+                </div>
+                <div class="data-item">
+                  <span class="data-label">Estado</span>
+                  <span class="data-value">${player.status === 'active' ? 'Activo' : player.status === 'injured' ? 'Lesionado' : 'Inactivo'}</span>
+                </div>
+              </div>
             </div>
-            <div class="description-box">${player.description}</div>
-          </div>
-        ` : ''}
-        
-        <div class="grid-2">
-          <div class="section">
-            <div class="section-header">
-              <h3>🏆 Torneos</h3>
-              <span class="count">${player.tournaments?.length || 0}</span>
-            </div>
-            ${player.tournaments && player.tournaments.length > 0 ? `
-              <div class="tournament-list">
-                ${player.tournaments.slice(0, 4).map((t: string) => `
-                  <div class="tournament-item">
-                    <span class="icon">⚽</span>
-                    <span class="name">${t}</span>
+
+            <!-- COL 2: MEDICAL & TOURNAMENTS -->
+            <div style="display: flex; flex-direction: column; gap: 30px;">
+              
+              <!-- TOURNAMENTS -->
+              <div class="info-card" style="padding-bottom: 20px;">
+                <div class="section-header">
+                  <div class="section-icon">🏆</div>
+                  <h3 class="section-title">Torneos Activos</h3>
+                </div>
+                ${parsedTournaments.length > 0 ? `
+                  <div class="badge-list">
+                    ${parsedTournaments.slice(0, 3).map((t: string) => `
+                      <div class="badge-item" style="border-left-color: #f59e0b;">
+                        <span class="badge-item-icon">⚽</span>
+                        <div class="badge-item-content">
+                          <div class="badge-item-title">${t}</div>
+                        </div>
+                      </div>
+                    `).join('')}
+                    ${parsedTournaments.length > 3 ? `
+                      <div style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 5px;">
+                        +${parsedTournaments.length - 3} torneos más
+                      </div>
+                    ` : ''}
                   </div>
-                `).join('')}
+                ` : `
+                  <div class="empty-state">Sin torneos registrados</div>
+                `}
               </div>
-              ${player.tournaments.length > 4 ? `
-                <p style="font-size: 12px; text-align: center; margin-top: 10px; color: #64748b;">
-                  +${player.tournaments.length - 4} torneos más
-                </p>
-              ` : ''}
-            ` : `
-              <div class="empty-state">Sin torneos registrados</div>
-            `}
-          </div>
-          
-          <div class="section">
-            <div class="section-header">
-              <h3>🏥 Historial Médico</h3>
-              <span class="count">${player.injuries?.length || 0}</span>
+
+              <!-- MEDICAL -->
+              <div class="info-card">
+                <div class="section-header">
+                  <div class="section-icon">🏥</div>
+                  <h3 class="section-title">Historial Médico</h3>
+                </div>
+                ${parsedInjuries.length > 0 ? `
+                  <div class="badge-list">
+                    ${parsedInjuries
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 2)
+        .map((injury: any) => `
+                        <div class="badge-item" style="border-left-color: #ef4444;">
+                          <div class="badge-item-content">
+                            <div class="badge-item-title" style="color: #b91c1c;">${injury.type}</div>
+                            <div class="badge-item-date">${formatDate(injury.date)}</div>
+                          </div>
+                        </div>
+                      `).join('')}
+                  </div>
+                ` : `
+                  <div class="empty-state">Sin antecedentes médicos</div>
+                `}
+              </div>
+
             </div>
-            ${player.injuries && player.injuries.length > 0 ? `
-              <div class="injury-list">
-                ${player.injuries
-                  .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .slice(0, 4)
-                  .map((injury: any) => `
-                    <div class="injury-item">
-                      <span class="type">${injury.type}</span>
-                      <span class="date">${formatDate(injury.date)}</span>
-                    </div>
-                  `).join('')}
-              </div>
-              ${player.injuries.length > 4 ? `
-                <p style="font-size: 12px; text-align: center; margin-top: 10px; color: #64748b;">
-                  +${player.injuries.length - 4} registros más
-                </p>
-              ` : ''}
-            ` : `
-              <div class="empty-state">Sin antecedentes médicos</div>
-            `}
           </div>
+
+          <!-- DESCRIPTION -->
+          ${player.description ? `
+            <div class="full-section">
+              <div class="section-header">
+                <div class="section-icon">📝</div>
+                <h3 class="section-title">Perfil Técnico y Observaciones</h3>
+              </div>
+              <div class="description-text">
+                ${player.description}
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- FOOTER -->
+          <footer class="footer">
+            <div>Documento generado el ${new Date().toLocaleDateString('es-CO')}</div>
+            <div>Uso exclusivo interno • GOLICA PRO</div>
+          </footer>
+          
         </div>
       </div>
       
       <script>
         window.onload = function() {
+          // Wait for images and fonts to load
           setTimeout(() => {
             window.print();
             setTimeout(() => window.close(), 100);
-          }, 500);
+          }, 800);
         };
       </script>
     </body>
