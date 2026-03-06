@@ -1,5 +1,6 @@
 // Main entry point for the tactical board module
 export { PlanningBoard } from './PlanningBoard';
+export type { PlanningBoardRef, PlanningBoardSnapshot } from './PlanningBoard';
 
 // Components
 export * from './components';

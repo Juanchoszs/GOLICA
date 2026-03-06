@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useAuthContext } from '../contexts/AuthContext';
 
 export function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [credential, setCredential] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthContext();
@@ -29,7 +29,7 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(credential, password);
 
       if (result.success) {
         toast.success('¡Inicio de sesión exitoso!');
@@ -104,25 +104,30 @@ export function LoginPage() {
                   Iniciar Sesión
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  Ingresa con tu email y contraseña
+                  Ingresa tu documento o email y tu contraseña
                 </p>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-6">
                 <div>
-                  <Label htmlFor="login-email" className="text-foreground flex items-center gap-2">
-                    <Mail size={16} />
-                    Email
+                  <Label htmlFor="login-credential" className="text-foreground flex items-center gap-2">
+                    <UserCircle size={16} />
+                    Documento o Email
                   </Label>
                   <Input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="login-credential"
+                    type="text"
+                    value={credential}
+                    onChange={(e) => setCredential(e.target.value)}
                     required
-                    placeholder="tu@email.com"
+                    placeholder="Tu documento de identidad o email"
                     className="bg-input-background border-border text-foreground"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Jugadores: ingresa tu número de documento
+                    <br />
+                    Administradores: ingresa tu email
+                  </p>
                 </div>
 
                 <div>

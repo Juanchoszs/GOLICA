@@ -68,6 +68,16 @@ serve(async (req: Request) => {
         }
 
         // 3. Delete from coaches table (if exists)
+        // First delete from bridge table to avoid constraint issues if not cascading
+        const { error: deleteBridgeError } = await supabaseClient
+            .from('coach_categories')
+            .delete()
+            .eq('coach_id', userId)
+
+        if (deleteBridgeError) {
+            console.error('Error deleting coach_categories record:', deleteBridgeError)
+        }
+
         const { error: deleteCoachError } = await supabaseClient
             .from('coaches')
             .delete()

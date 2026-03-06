@@ -47,12 +47,32 @@ async function fetchUserProfile(user: User): Promise<UserProfile | null> {
     if (error) throw error;
 
     if (profile) {
+      let assignedCategories: string[] | undefined;
+
+      // If the user is a coach, fetch their assigned categories from the coaches table
+      if (profile.role === 'coach') {
+        try {
+          const { data: coachData } = await supabase
+            .from('coaches')
+            .select('assigned_categories')
+            .eq('id', authUserId)
+            .maybeSingle();
+
+          if (coachData?.assigned_categories && Array.isArray(coachData.assigned_categories)) {
+            assignedCategories = coachData.assigned_categories;
+          }
+        } catch (err) {
+          console.error('Error fetching coach categories:', err);
+        }
+      }
+
       return {
         id: authUserId,
         name: profile.name,
         email: profile.email,
         role: profile.role as 'admin' | 'coach' | 'player',
-        identification: profile.identification
+        identification: profile.identification,
+        assigned_categories: assignedCategories,
       };
     }
   } catch (err) {
@@ -140,19 +160,52 @@ export function useAuth() {
     };
   }, []);
 
-  // Login
-  const login = useCallback(async (email: string, password: string) => {
+  // Login - supports both email and identification (document/cedula)
+  const login = useCallback(async (emailOrIdentification: string, password: string) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      // Determine if input is email or identification
+      const isEmail = emailOrIdentification.includes('@');
+      let loginEmail = emailOrIdentification;
 
-    if (error) {
-      setState(prev => ({ ...prev, loading: false, error: error.message }));
-      return { success: false, error: error.message };
+      // If not email, try to find the user by identification first
+      if (!isEmail) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('identification', emailOrIdentification)
+          .maybeSingle();
+
+        if (profileError || !profileData) {
+          setState(prev => ({ ...prev, loading: false }));
+          return { 
+            success: false, 
+            error: 'Usuario no encontrado. Verifica tu número de documento.' 
+          };
+        }
+
+        loginEmail = profileData.email;
+      }
+
+      // Now perform auth login using email
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: loginEmail, 
+        password 
+      });
+
+      if (error) {
+        setState(prev => ({ ...prev, loading: false, error: error.message }));
+        return { success: false, error: error.message };
+      }
+
+      // Profile will be loaded by onAuthStateChange listener
+      return { success: true, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      setState(prev => ({ ...prev, loading: false, error: errorMessage }));
+      return { success: false, error: errorMessage };
     }
-
-    // Profile will be loaded by onAuthStateChange listener
-    return { success: true, error: null };
   }, []);
 
   // Logout

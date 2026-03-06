@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrainingSession } from '../types/session.types';
 import { useTrainingSession } from '../hooks/useTrainingSession';
 import { WarmupSectionComponent } from './WarmupSection';
 import { MainSectionComponent } from './MainSection';
-import { PlanningBoard } from '../board';
+import { PlanningBoard, type PlanningBoardRef } from '../board';
 import { Button } from '../../ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
 import { Input } from '../../ui/input';
@@ -57,6 +57,7 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [categories, setCategories] = useState<Array<any>>([]);
+  const planningBoardRef = useRef<PlanningBoardRef>(null);
 
   // Initialize categories from props or fetch them
   useEffect(() => {
@@ -107,9 +108,44 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
   };
 
   const handleSave = () => {
-    if (onSave) {
-      onSave(session);
+    if (!onSave) return;
+    // Flush pizarra al ejercicio actual si estamos en tab táctica (para no perder la imagen)
+    let sessionToSave = session;
+    if (selectedExerciseId && planningBoardRef.current) {
+      const snapshot = planningBoardRef.current.getSnapshot();
+      if (snapshot) {
+        sessionToSave = {
+          ...session,
+          main: {
+            ...session.main,
+            exercises: session.main.exercises.map((ex) =>
+              ex.id === selectedExerciseId
+                ? {
+                    ...ex,
+                    tacticBoardData: snapshot.boardData,
+                    tacticBoardImageBase64: snapshot.imageUri,
+                  }
+                : ex
+            ),
+          },
+        };
+      }
     }
+    onSave(sessionToSave);
+  };
+
+  // Al salir de la pestaña Pizarra Táctica, guardar la captura en el ejercicio para no perderla al guardar
+  const handleTabChange = (v: 'session' | 'tactic') => {
+    if (activeTab === 'tactic' && v === 'session' && selectedExerciseId && planningBoardRef.current) {
+      const snapshot = planningBoardRef.current.getSnapshot();
+      if (snapshot) {
+        updateMainExercise(selectedExerciseId, {
+          tacticBoardData: snapshot.boardData,
+          tacticBoardImageBase64: snapshot.imageUri,
+        });
+      }
+    }
+    setActiveTab(v);
   };
 
   const handleCategoryChange = (categoryName: string) => {
@@ -214,7 +250,7 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
 
       {/* Tabs */}
       <div className="flex-1 overflow-auto">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as 'session' | 'tactic')} className="w-full h-full flex flex-col">
           <TabsList className="w-full rounded-none border-b bg-muted/30 p-3 justify-start">
             <TabsTrigger value="session" className="gap-2">
               📋 Planificación
@@ -287,6 +323,7 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <PlanningBoard
+                    ref={planningBoardRef}
                     onSaveBoard={() => { }}
                     onChange={handleBoardChange}
                     initialData={session.main.exercises.find((ex) => ex.id === selectedExerciseId)?.tacticBoardData}

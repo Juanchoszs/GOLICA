@@ -11,9 +11,7 @@ interface PlanningSessionViewProps {
 
 export const PlanningSessionView: React.FC<PlanningSessionViewProps> = ({ session, onBack }) => {
     const warmupDuration = session.warmup?.exercises?.reduce((acc, ex) => acc + (ex.duration || 0), 0) || 0;
-    // Si guardaste el cálculo al crear, usamos mainExercises * 15 como default para mostrar aprox
-    const mainDuration = session.main?.exercises?.length * 15 || 0;
-    const totalDuration = warmupDuration + mainDuration;
+    const mainExerciseCount = session.main?.exercises?.length || 0;
 
     const formatDate = (dateString: string) => {
         try {
@@ -61,7 +59,7 @@ export const PlanningSessionView: React.FC<PlanningSessionViewProps> = ({ sessio
                             </div>
                             <div className="flex items-center gap-2">
                                 <Clock size={16} className="text-primary/70" />
-                                <span>~{totalDuration} minutos ({totalDuration / 60 >= 1 ? `${Math.floor(totalDuration / 60)}hr ` : ''}{totalDuration % 60}m)</span>
+                                <span>Calentamiento: {warmupDuration} min | {mainExerciseCount} ejercicio(s) principal(es)</span>
                             </div>
                         </div>
                     </div>
@@ -111,7 +109,7 @@ export const PlanningSessionView: React.FC<PlanningSessionViewProps> = ({ sessio
                         </div>
                         <h2 className="text-xl font-bold">Fase Principal</h2>
                         <span className="ml-auto text-sm font-medium text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                            {session.main.exercises.length} Ejercicios
+                            {mainExerciseCount} Ejercicios
                         </span>
                     </div>
 
@@ -129,7 +127,7 @@ export const PlanningSessionView: React.FC<PlanningSessionViewProps> = ({ sessio
 
                                 <div className="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     {/* Text Details (Takes up 2 cols if image exists, 3 if not) */}
-                                    <div className={`space-y-6 ${ex.tacticBoardImageUrl ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+                                    <div className={`space-y-6 ${(ex.tacticBoardImageUrl || ex.tacticBoardData) ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
                                         {ex.description && (
                                             <div>
                                                 <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Descripción General</h4>
@@ -202,17 +200,25 @@ export const PlanningSessionView: React.FC<PlanningSessionViewProps> = ({ sessio
                                     {ex.tacticBoardImageUrl && (
                                         <div className="lg:col-span-1">
                                             <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Pizarra Táctica</h4>
-                                            <div className="rounded-xl overflow-hidden border-2 border-border shadow-md bg-zinc-900 group relative">
-                                                {/* We use standard img element. Object-contain to fit it nicely */}
+                                            <div className="rounded-xl overflow-hidden border-2 border-border shadow-md bg-zinc-900">
                                                 <img
                                                     src={ex.tacticBoardImageUrl}
                                                     alt="Pizarra táctica"
-                                                    className="w-full h-auto object-cover transform transition-transform group-hover:scale-105"
+                                                    className="w-full h-auto object-cover"
                                                     loading="lazy"
                                                 />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                                                    <span className="text-white font-medium px-3 py-1 bg-black/50 rounded-full text-sm">Pizarra Asociada</span>
-                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Fallback: Show placeholder when board data exists but image URL is missing */}
+                                    {!ex.tacticBoardImageUrl && ex.tacticBoardData && (
+                                        <div className="lg:col-span-1">
+                                            <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Pizarra Táctica</h4>
+                                            <div className="rounded-xl border-2 border-dashed border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/20 p-6 flex flex-col items-center justify-center gap-2 text-center">
+                                                <span className="text-3xl">📋</span>
+                                                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Pizarra táctica configurada</p>
+                                                <p className="text-xs text-muted-foreground">La imagen no se pudo cargar, pero los datos de la pizarra están guardados.</p>
                                             </div>
                                         </div>
                                     )}

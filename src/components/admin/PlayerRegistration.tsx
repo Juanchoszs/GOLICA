@@ -66,20 +66,23 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.identification || !formData.email || !formData.phone || !formData.category) {
-      toast.error('Por favor completa todos los campos obligatorios');
+    if (!formData.name || !formData.identification || !formData.phone || !formData.category) {
+      toast.error('Por favor completa todos los campos obligatorios (nombre, documento, teléfono, categoría)');
       return;
     }
 
     setIsSubmitting(true);
 
     const password = generateSecurePassword(formData.name, formData.identification);
+    
+    // Generate email from identification if not provided
+    const emailToUse = formData.email || `jugador.${formData.identification.replace(/\s/g, '')}@golica.local`;
 
     try {
       // Usar la función de Supabase para crear el usuario de forma segura
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
-          email: formData.email,
+          email: emailToUse,
           password: password,
           name: formData.name,
           role: 'player',
@@ -117,7 +120,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
       toast.success('¡Jugador registrado exitosamente!');
 
       setCreatedCredentials({
-        email: formData.email,
+        email: `${formData.name} (Documento: ${formData.identification})`,
         password: password
       });
 
@@ -155,7 +158,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
             </h3>
 
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Usuario / Email</label>
+              <label className="text-xs text-muted-foreground">Datos del Jugador</label>
               <div className="flex gap-2">
                 <code className="flex-1 bg-background border border-border px-3 py-2 rounded-lg text-sm font-mono text-foreground break-all">
                   {createdCredentials.email}
@@ -180,7 +183,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
 
             <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg mt-4">
               <p className="text-xs text-blue-600 dark:text-blue-400 leading-relaxed">
-                ℹ️ <strong>Nota:</strong> La gestión de accesos y contraseñas ahora se maneja centralizadamente a través de Supabase Auth.
+                ℹ️ <strong>Login:</strong> El jugador puede iniciar sesión usando su <strong>número de documento</strong> y esta <strong>contraseña</strong>.
               </p>
             </div>
 
@@ -264,16 +267,16 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
 
                 <div>
                   <Label className="text-foreground">
-                    Email <span className="text-red-500">*</span>
+                    Email <span className="text-muted-foreground text-xs">(opcional)</span>
                   </Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    placeholder="jugador@email.com"
+                    placeholder="jugador@email.com (si no se proporciona, se generará uno automático)"
                     className="bg-input-background border-border text-foreground"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Si dejas vacío, se generará automáticamente</p>
                 </div>
 
                 <div>

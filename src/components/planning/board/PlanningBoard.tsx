@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Stage, Layer } from 'react-konva';
 import { useBoardState } from './hooks/useBoardState';
 import { Field } from './components/Field';
@@ -22,7 +22,19 @@ interface PlanningBoardProps {
   initialData?: string;
 }
 
-export const PlanningBoard: React.FC<PlanningBoardProps> = ({ onSaveBoard, onChange, initialData }) => {
+export interface PlanningBoardSnapshot {
+  boardData: string;
+  imageUri: string;
+}
+
+export interface PlanningBoardRef {
+  getSnapshot: () => PlanningBoardSnapshot | null;
+}
+
+export const PlanningBoard = forwardRef<PlanningBoardRef, PlanningBoardProps>(function PlanningBoard(
+  { onSaveBoard, onChange, initialData },
+  ref
+) {
   const {
     elements,
     lines,
@@ -55,6 +67,21 @@ export const PlanningBoard: React.FC<PlanningBoardProps> = ({ onSaveBoard, onCha
   const stageRef = useRef<Konva.Stage>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Exponer captura actual para que el padre pueda forzar captura al guardar
+  useImperativeHandle(ref, () => ({
+    getSnapshot(): PlanningBoardSnapshot | null {
+      if (!stageRef.current || (elements.length === 0 && lines.length === 0)) return null;
+      try {
+        const boardData = JSON.stringify({ elements, lines });
+        const imageUri = stageRef.current.toDataURL('image/png');
+        return { boardData, imageUri };
+      } catch (e) {
+        console.error('Error capturing board snapshot', e);
+        return null;
+      }
+    },
+  }), [elements, lines]);
+
   React.useEffect(() => {
     const timer = setTimeout(() => {
       const currentData = JSON.stringify({ elements, lines });
@@ -72,7 +99,7 @@ export const PlanningBoard: React.FC<PlanningBoardProps> = ({ onSaveBoard, onCha
           }
         }
       }
-    }, 600); // Debounce de 600ms para no saturar 
+    }, 400); // Debounce 400ms para actualizar estado y que no se pierda al cambiar de pestaña
     return () => clearTimeout(timer);
   }, [elements, lines, onChange]);
 
@@ -346,4 +373,4 @@ export const PlanningBoard: React.FC<PlanningBoardProps> = ({ onSaveBoard, onCha
       </div>
     </div>
   );
-};
+});

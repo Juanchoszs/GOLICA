@@ -67,18 +67,43 @@ serve(async (req: Request) => {
             throw new Error('Faltan campos requeridos: email, password, name, identification')
         }
 
-        // 1. Check duplicates via profiles (lighter and avoids admin list pagination)
-        const { data: existingProfile, error: existingProfileError } = await supabaseClient
-            .from('profiles')
-            .select('id')
-            .eq('email', email)
-            .maybeSingle()
-
-        if (existingProfileError) {
-            console.error('Error checking existing profile by email:', existingProfileError)
+        // 1. Check duplicates via Auth and profiles
+        console.log('Checking for existing user with email:', email)
+        
+        // This is the most reliable way to check for Auth existence
+        // We use listUsers because getUserByEmail might not be available in all versions/roles easily
+        const { data: { users: authUsers }, error: listError } = await supabaseClient.auth.admin.listUsers()
+        if (listError) {
+            console.error('Error listing users:', listError)
         }
-        if (existingProfile) {
-            throw new Error(`Ya existe un usuario con el email: ${email}`)
+
+        const existingAuthUser = authUsers?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
+
+        if (existingAuthUser) {
+            console.log('Found existing auth user with ID:', existingAuthUser.id)
+            // Check if profile exists
+            const { data: profileExists, error: profileCheckError } = await supabaseClient
+                .from('profiles')
+                .select('id')
+                .eq('id', existingAuthUser.id)
+                .maybeSingle()
+
+            if (profileCheckError) {
+                console.error('Error checking profile:', profileCheckError)
+            }
+
+            if (!profileExists) {
+                // ORPHAN: User in Auth but no Profile. Delete to start fresh.
+                console.log('Orphaned auth user found. Deleting before recreation...')
+                const { error: delError } = await supabaseClient.auth.admin.deleteUser(existingAuthUser.id)
+                if (delError) {
+                    console.error('Failed to delete orphan auth user:', delError)
+                    throw new Error(`Conflicto con usuario existente en Auth que no pudo ser limpiado: ${delError.message}`)
+                }
+            } else {
+                // Conflict with real user
+                throw new Error(`Ya existe un usuario activo con el correo: ${email}`)
+            }
         }
 
         // 2. Create User in Auth
@@ -222,6 +247,7 @@ serve(async (req: Request) => {
             }
 
         } else if (role === 'coach') {
+            console.log('Inserting coach record for ID:', userId)
             const { error: coachError } = await supabaseClient
                 .from('coaches')
                 .insert([{ id: userId, assigned_categories }])
@@ -235,6 +261,36 @@ serve(async (req: Request) => {
                     console.error('Rollback error deleting auth user:', rollbackErr)
                 }
                 throw new Error(`No se pudo crear el registro de coach: ${coachError.message}`)
+            }
+
+            // 5. Link categories in bridge table
+            if (assigned_categories && Array.isArray(assigned_categories) && assigned_categories.length > 0) {
+                console.log('Linking categories in bridge table:', assigned_categories)
+                
+                // Fetch category IDs
+                const { data: categoryData, error: catFetchError } = await supabaseClient
+                    .from('categories')
+                    .select('id, name')
+                    .in('name', assigned_categories)
+
+                if (catFetchError) {
+                    console.error('Error fetching category IDs:', catFetchError)
+                } else if (categoryData && categoryData.length > 0) {
+                    const associations = categoryData.map((cat: any) => ({
+                        coach_id: userId,
+                        category_id: cat.id
+                    }))
+
+                    const { error: bridgeError } = await supabaseClient
+                        .from('coach_categories')
+                        .insert(associations)
+
+                    if (bridgeError) {
+                        console.error('Error inserting into coach_categories:', bridgeError)
+                        // We don't necessarily rollback the whole user if bridge table insertion fails
+                        // as the coach and profile are already there, but we log the error.
+                    }
+                }
             }
         }
 

@@ -305,17 +305,17 @@ export const SessionsManagement: React.FC = () => {
                 {/* Session Info */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Duración Calentamiento</p>
-                    <p className="text-lg font-bold">{sessionDetails.warmup_duration_minutes} min</p>
+                    <p className="text-sm font-medium text-muted-foreground">Calentamiento</p>
+                    <p className="text-lg font-bold">{sessionDetails.warmup_duration_minutes || 0} min</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Duración Principal</p>
-                    <p className="text-lg font-bold">{sessionDetails.main_duration_minutes} min</p>
+                    <p className="text-sm font-medium text-muted-foreground">Ejercicios Principales</p>
+                    <p className="text-lg font-bold">{sessionDetails.mainExercises?.length || (sessionDetails.main_exercises || []).length || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total</p>
+                    <p className="text-sm font-medium text-muted-foreground">Duración Total</p>
                     <p className="text-lg font-bold">
-                      {(sessionDetails.warmup_duration_minutes || 0) + (sessionDetails.main_duration_minutes || 0)} min
+                      {sessionDetails.warmup_duration_minutes || 0} min
                     </p>
                   </div>
                   <div>
@@ -391,8 +391,7 @@ export const SessionsManagement: React.FC = () => {
                           <TableHead>Categoría</TableHead>
                           <TableHead>Fecha</TableHead>
                           <TableHead>Calentamiento</TableHead>
-                          <TableHead>Principal</TableHead>
-                          <TableHead>Total</TableHead>
+                          <TableHead>Ejercicios</TableHead>
                           <TableHead>Estado</TableHead>
                           <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
@@ -408,10 +407,7 @@ export const SessionsManagement: React.FC = () => {
                               {new Date(session.session_date).toLocaleDateString()}
                             </TableCell>
                             <TableCell>{session.warmup_duration_minutes || 0} min</TableCell>
-                            <TableCell>{session.main_duration_minutes || 0} min</TableCell>
-                            <TableCell>
-                              {(session.warmup_duration_minutes || 0) + (session.main_duration_minutes || 0)} min
-                            </TableCell>
+                            <TableCell>{(session.main_exercises || []).length} ejerc.</TableCell>
                             <TableCell>
                               <span className={`text-xs px-2 py-1 rounded-full ${
                                 session.status === 'active' ? 'bg-green-100 text-green-700' :

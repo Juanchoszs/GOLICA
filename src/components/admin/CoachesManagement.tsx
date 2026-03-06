@@ -8,7 +8,7 @@ import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Checkbox } from '../ui/checkbox';
 import { toast } from 'sonner';
-import { Edit2, Save, X, UserPlus, ArrowLeft, Eye, EyeOff, Check, Copy, FileText } from 'lucide-react';
+import { Edit2, Save, X, UserPlus, ArrowLeft, Eye, EyeOff, Check, Copy, FileText, Trash2 } from 'lucide-react';
 
 
 export function CoachesManagement() {
@@ -56,21 +56,24 @@ export function CoachesManagement() {
     async function fetchCoaches() {
         try {
             setLoading(true);
-            const { data, error } = await supabase.from('coaches')
-                .select('*, profiles(name, email, identification, phone, initial_password)')
-                .order('id');
+            // Fetch all profiles that have role 'coach'
+            // This ensures we see them even if the 'coaches' table record is missing
+            const { data, error } = await supabase.from('profiles')
+                .select('*, coaches(*)')
+                .eq('role', 'coach')
+                .order('name');
 
             if (error) throw error;
 
-            // Flatten data for easier use
-            const formattedCoaches = data?.map(c => ({
-                id: c.id,
-                name: c.profiles?.name || 'Sin nombre',
-                email: c.profiles?.email || 'Sin email',
-                identification: c.profiles?.identification || '',
-                phone: c.profiles?.phone || '',
-                initial_password: c.profiles?.initial_password,
-                assigned_categories: c.assigned_categories || []
+            // Flatten data
+            const formattedCoaches = data?.map(p => ({
+                id: p.id,
+                name: p.name || 'Sin nombre',
+                email: p.email || 'Sin email',
+                identification: p.identification || '',
+                phone: p.phone || '',
+                initial_password: p.initial_password,
+                assigned_categories: p.coaches?.[0]?.assigned_categories || []
             })) || [];
 
             setCoaches(formattedCoaches);
@@ -134,8 +137,30 @@ export function CoachesManagement() {
             fetchCoaches();
             setEditingCoachId(null);
         } catch (error) {
-            console.error('Error updating coach:', error);
             toast.error('Error al guardar cambios');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteCoach = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que quieres eliminar al entrenador ${name}? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+                body: { userId: id }
+            });
+
+            if (error) throw error;
+
+            toast.success('Entrenador eliminado correctamente');
+            fetchCoaches();
+        } catch (error: any) {
+            console.error('Error deleting coach:', error);
+            toast.error(error.message || 'Error al eliminar entrenador');
         } finally {
             setIsSubmitting(false);
         }
@@ -449,9 +474,19 @@ export function CoachesManagement() {
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(coach)}>
-                                                <Edit2 size={16} />
-                                            </Button>
+                                            <div className="flex gap-2 justify-end">
+                                                <Button variant="ghost" size="sm" onClick={() => handleEdit(coach)}>
+                                                    <Edit2 size={16} className="text-primary" />
+                                                </Button>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    onClick={() => handleDeleteCoach(coach.id, coach.name)}
+                                                    disabled={isSubmitting}
+                                                >
+                                                    <Trash2 size={16} className="text-destructive" />
+                                                </Button>
+                                            </div>
                                         )}
                                     </TableCell>
                                 </TableRow>

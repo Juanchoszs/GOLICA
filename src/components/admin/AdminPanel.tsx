@@ -6,6 +6,7 @@ import { PlayersManagement } from './PlayersManagement';
 import { CoachDashboard } from '../coach/CoachDashboard';
 import { CoachesManagement } from './CoachesManagement';
 import { CategoriesManagement } from './CategoriesManagement';
+import { PhysiotherapyManagement } from './PhysiotherapyManagement';
 import { useTheme } from '../ThemeContext';
 import { PlanningList } from '../planning/PlanningList';
 import { PlanningBuilder } from '../planning/PlanningBuilder';
@@ -31,7 +32,7 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
     { id: 'planificaciones', label: 'Planificaciones', icon: CalendarDays, available: true },
     { id: 'gestion-entrenadores', label: 'Gestión Entrenadores', icon: Shield, available: true },
     { id: 'administrativo', label: 'Gestión Categorías', icon: Settings, available: true },
-    { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: false },
+    { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: true },
   ];
 
   const renderContent = () => {
@@ -69,7 +70,7 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
           </div>
         );
       case 'fisioterapia':
-        return <div className="p-8"><h2 className="text-2xl text-foreground">Módulo de Fisioterapia - Próximamente</h2></div>;
+        return <PhysiotherapyManagement />;
       case 'administrativo':
         return <CategoriesManagement />;
       default:
