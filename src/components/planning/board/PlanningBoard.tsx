@@ -73,7 +73,7 @@ export const PlanningBoard = forwardRef<PlanningBoardRef, PlanningBoardProps>(fu
       if (!stageRef.current || (elements.length === 0 && lines.length === 0)) return null;
       try {
         const boardData = JSON.stringify({ elements, lines });
-        const imageUri = stageRef.current.toDataURL('image/png');
+        const imageUri = stageRef.current.toDataURL({ mimeType: 'image/png' });
         return { boardData, imageUri };
       } catch (e) {
         console.error('Error capturing board snapshot', e);

@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 import { ImageEditor } from '../ui/ImageEditor';
 import { PersonalInfoTab } from './tabs/PersonalInfoTab';
-import { PerformanceTab } from './tabs/PerformanceTab';
 import { HealthTab } from './tabs/HealthTab';
 import { TestsTab } from './tabs/TestsTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
@@ -47,6 +46,40 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
 
   // Image editing state
   const [editingImage, setEditingImage] = useState<{ url: string, field: string } | null>(null);
+
+  // Signed URLs for private documents
+  const [signedUrls, setSignedUrls] = useState<{ [key: string]: string }>({});
+
+  const fetchSignedUrls = async () => {
+    const fields = ['id_card_front_url', 'id_card_back_url', 'id_card_url'];
+    const newSignedUrls: { [key: string]: string } = {};
+
+    for (const field of fields) {
+      const url = editedPlayer[field];
+      if (url && url.includes('player-documents')) {
+        try {
+          // Extract path: everything after the bucket name
+          const path = url.split('player-documents/')[1]?.split('?')[0];
+          if (path) {
+            const { data, error } = await supabase.storage
+              .from('player-documents')
+              .createSignedUrl(path, 3600); // 1 hour
+
+            if (data?.signedUrl) {
+              newSignedUrls[field] = data.signedUrl;
+            }
+          }
+        } catch (err) {
+          console.error(`Error creating signed URL for ${field}:`, err);
+        }
+      }
+    }
+    setSignedUrls(newSignedUrls);
+  };
+
+  useState(() => {
+    fetchSignedUrls();
+  });
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -140,8 +173,9 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
 
     const toastId = toast.loading('Subiendo imagen editada...');
     try {
-      // Use 'player-documents' for all items since 'player-photos' bucket specific doesn't exist yet
-      const bucketName = 'player-documents';
+      // Separar buckets según el campo
+      const isPhoto = editingImage.field === 'photo_url';
+      const bucketName = isPhoto ? 'player-photos' : 'player-documents';
 
       // 1. Delete old image if it exists
       const oldUrl = editedPlayer[editingImage.field];
@@ -199,6 +233,11 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
           ...prev,
           [editingImage.field]: publicUrl
         }));
+
+        // Refresh signed URLs if it was a document
+        if (editingImage.field !== 'photo_url') {
+          fetchSignedUrls();
+        }
       }
 
       setEditingImage(null);
@@ -212,13 +251,17 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-CO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-CO', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   if (editingImage) {
@@ -288,10 +331,6 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
           <TabsTrigger value="info" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             Información General
           </TabsTrigger>
-          <TabsTrigger value="performance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            <Activity size={16} className="mr-2" />
-            Rendimiento
-          </TabsTrigger>
           <TabsTrigger value="health" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
             <Heart size={16} className="mr-2" />
             Fisioterapia
@@ -315,11 +354,6 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
           <PersonalInfoTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} setEditingImage={setEditingImage} />
         </TabsContent>
 
-        {/* Rendimiento */}
-        <TabsContent value="performance">
-          <PerformanceTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} />
-        </TabsContent>
-
         {/* Fisioterapia */}
         <TabsContent value="health">
           <HealthTab editedPlayer={editedPlayer} setEditedPlayer={setEditedPlayer} playerId={player.id} />
@@ -332,7 +366,12 @@ export function PlayerDetails({ player, onBack, user, isEmbedded = false }: Play
 
         {/* Documentos */}
         <TabsContent value="documents" className="mt-6">
-          <DocumentsTab editedPlayer={editedPlayer} player={player} setEditingImage={setEditingImage} />
+          <DocumentsTab 
+            editedPlayer={editedPlayer} 
+            player={player} 
+            setEditingImage={setEditingImage} 
+            signedUrls={signedUrls}
+          />
         </TabsContent>
 
         {/* Torneos */}

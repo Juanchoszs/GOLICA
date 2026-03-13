@@ -43,9 +43,7 @@ import {
   getTrainingSessions,
   deleteTrainingSession,
   getTemplates,
-  deleteTemplate,
-  getMainExercises,
-  getWarmupExercises
+  deleteTemplate
 } from '../../utils/supabase/trainingSessionsService';
 import { supabase } from '../../utils/supabase/client';
 
@@ -106,7 +104,12 @@ export const SessionsManagement: React.FC = () => {
   const fetchSessions = async () => {
     setLoading(true);
     try {
-      const allSessions = await getTrainingSessions(selectedCoachId, selectedCategory);
+      let allSessions = await getTrainingSessions(selectedCoachId);
+      
+      // Filter by category if selected
+      if (selectedCategory) {
+        allSessions = allSessions.filter(s => s.category_name === selectedCategory || s.category_id === selectedCategory);
+      }
       
       // Filter by search term
       const filtered = allSessions.filter(session =>
@@ -170,18 +173,17 @@ export const SessionsManagement: React.FC = () => {
 
   const handleViewSessionDetails = async (sessionId: string) => {
     try {
-      const exercises = await getMainExercises(sessionId);
-      const warmups = await getWarmupExercises(sessionId);
-
       const sessionData = sessions.find(s => s.id === sessionId);
-      setSessionDetails({
-        ...sessionData,
-        mainExercises: exercises,
-        warmupExercises: warmups
-      });
-      setSelectedSession(sessionId);
+      if (sessionData) {
+        setSessionDetails({
+          ...sessionData,
+          mainExercises: sessionData.main_exercises || [],
+          warmupExercises: sessionData.warmup_exercises || []
+        });
+        setSelectedSession(sessionId);
+      }
     } catch (error) {
-      console.error('Error fetching session details:', error);
+      console.error('Error loading session details:', error);
       toast.error('Error al cargar los detalles');
     }
   };

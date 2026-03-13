@@ -250,3 +250,13 @@ export async function uploadBoardImage(base64Data: string): Promise<string | nul
     throw new Error(`No se pudo subir la imagen de la pizarra: ${message}`);
   }
 }
+
+export async function getTemplates(coachId: string): Promise<any[]> {
+  // TODO: Implement templates fetching if there is a table for it
+  return [];
+}
+
+export async function deleteTemplate(templateId: string): Promise<{ success: boolean; error: string | null }> {
+  // TODO: Implement template deletion
+  return { success: false, error: 'Not implemented' };
+}

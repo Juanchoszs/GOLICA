@@ -9,6 +9,7 @@ import { ContactPage } from './components/ContactPage';
 import { LoginPage } from './components/LoginPage';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { CoachPanel } from './components/coach/CoachPanel';
+import { PhysioPanel } from './components/physio/PhysioPanel';
 import { PlayerPortal } from './components/PlayerPortal';
 import { Toaster } from './components/ui/sonner';
 import { useState, useEffect } from 'react';
@@ -80,23 +81,26 @@ function AppContent() {
         }
         if (user.role === 'admin') return <AdminPanel user={user} onLogout={handleLogout} />;
         if (user.role === 'coach') return <CoachPanel user={user} onLogout={handleLogout} />;
+        if (user.role === 'physiotherapist') return <PhysioPanel user={user} onLogout={handleLogout} />;
         return <PlayerPortal user={user} onLogout={handleLogout} />;
       default:
         return <HomePage onNavigate={setCurrentPage} />;
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
-      {currentPage !== 'admin' && <Header currentPage={currentPage} onNavigate={setCurrentPage} />}
-      <main>
-        {renderPage()}
-      </main>
-      {currentPage !== 'login' && currentPage !== 'contacto' && currentPage !== 'admin' && <Footer />}
-      {currentPage === 'contacto' && <Footer />}
-      <Toaster />
-    </div>
-  );
+    const showHeader = ['inicio', 'quienes-somos', 'logros', 'contacto', 'login'].includes(currentPage);
+    const showFooter = ['inicio', 'quienes-somos', 'logros', 'contacto'].includes(currentPage);
+
+    return (
+        <div className="min-h-screen bg-background transition-colors duration-300">
+            {showHeader && <Header currentPage={currentPage} onNavigate={setCurrentPage} />}
+            <main>
+                {renderPage()}
+            </main>
+            {showFooter && <Footer />}
+            <Toaster />
+        </div>
+    );
 }
 
 export default function App() {

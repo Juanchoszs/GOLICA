@@ -8,6 +8,7 @@ export interface Player {
   image?: string; // If available in future
   photo_url?: string; // Photo URL from database
   status: 'available' | 'assigned' | 'injured' | 'suspended';
+  health_status?: string;
 }
 
 export interface Position {

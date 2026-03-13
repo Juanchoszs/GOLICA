@@ -9,7 +9,7 @@ export * from './components';
 export * from './hooks';
 
 // Types
-export * from './types';
+export type { ElementType, LineType, BoardElement, TacticalLine as TacticalLineType, BoardState, DragEventData, TransformEventData } from './types';
 
 // Utilities
 export * from './utils';

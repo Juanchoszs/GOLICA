@@ -8,9 +8,10 @@ interface DocumentsTabProps {
   editedPlayer: any;
   player: any;
   setEditingImage: (state: { url: string; field: string } | null) => void;
+  signedUrls?: { [key: string]: string };
 }
 
-export function DocumentsTab({ editedPlayer, player, setEditingImage }: DocumentsTabProps) {
+export function DocumentsTab({ editedPlayer, player, setEditingImage, signedUrls = {} }: DocumentsTabProps) {
   const handleUploadClick = (field: string) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -95,7 +96,7 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
               <div className="aspect-[1.6/1] w-full relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => !editedPlayer.id_card_front_url && handleUploadClick('id_card_front_url')}>
                 {editedPlayer.id_card_front_url ? (
                   <img
-                    src={editedPlayer.id_card_front_url}
+                    src={signedUrls['id_card_front_url'] || editedPlayer.id_card_front_url}
                     alt="ID Front"
                     className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
@@ -131,7 +132,7 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
               <div className="aspect-[1.6/1] w-full relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => !editedPlayer.id_card_back_url && handleUploadClick('id_card_back_url')}>
                 {editedPlayer.id_card_back_url ? (
                   <img
-                    src={editedPlayer.id_card_back_url}
+                    src={signedUrls['id_card_back_url'] || editedPlayer.id_card_back_url}
                     alt="ID Back"
                     className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                   />
@@ -161,7 +162,7 @@ export function DocumentsTab({ editedPlayer, player, setEditingImage }: Document
               </div>
               <div className="relative group overflow-hidden rounded-xl border border-border bg-muted/30 flex items-center justify-center shadow-inner">
                 <img
-                  src={editedPlayer.id_card_url}
+                  src={signedUrls['id_card_url'] || editedPlayer.id_card_url}
                   alt="ID Legacy"
                   className="max-h-[300px] mx-auto object-contain transition-transform duration-500 group-hover:scale-105"
                 />

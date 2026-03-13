@@ -173,7 +173,7 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
     <div className="w-full h-full flex flex-col bg-background">
       {/* HEADER - Category Selection PROMINENT */}
       <div className="bg-amber-50 dark:bg-amber-950/30 border-b-2 border-amber-200 dark:border-amber-800 p-4">
-        <div className="max-w-7xl mx-auto flex items-center gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
             <label className="text-lg font-bold text-amber-900 dark:text-amber-100 block mb-2">
               🎯 CATEGORÍA DE LA PLANIFICACIÓN <span className="text-red-600">*</span>
@@ -211,8 +211,8 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
       </div>
 
       {/* Header - Session Info */}
-      <div className="flex items-center justify-between gap-6 p-6 border-b bg-muted/30">
-        <div className="flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 p-6 border-b bg-muted/30">
+        <div className="flex-1 w-full">
           <input
             type="text"
             value={session.name}
@@ -231,16 +231,16 @@ export const CompleteSessionBuilder: React.FC<CompleteSessionBuilderProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2 ml-4">
+        <div className="flex gap-2 w-full sm:w-auto mt-4 sm:mt-0 justify-end">
 
           {onCancel && (
-            <Button variant="outline" onClick={onCancel} className="gap-2">
+            <Button variant="outline" onClick={onCancel} className="gap-2 flex-1 sm:flex-none">
               <X size={16} />
               Cancelar
             </Button>
           )}
           {onSave && (
-            <Button onClick={handleSave} className="gap-2">
+            <Button onClick={handleSave} className="gap-2 flex-1 sm:flex-none">
               <Save size={16} />
               Guardar
             </Button>

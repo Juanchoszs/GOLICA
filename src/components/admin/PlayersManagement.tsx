@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Card } from '../ui/card';
-import { Plus, Search, User, Edit, Eye, Trash2 } from 'lucide-react';
+import { Plus, Search, User, Edit, Eye, Trash2, Ambulance } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../utils/supabase/client';
 import { PlayerDetails } from './PlayerDetails';
@@ -35,6 +35,7 @@ interface Player {
   tournaments?: any[];
   injuries?: any[];
   tests?: any[];
+  health_status?: string;
 }
 
 interface PlayersManagementProps {
@@ -107,7 +108,7 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
       // Try loading `players` extra fields. If it fails (RLS/permissions), we still show profiles.
       const { data: playersData, error: playersError } = await supabase
         .from('players')
-        .select('id, category, position, status, birth_date, photo_url, id_card_front_url, id_card_back_url, performance, previous_team, description, weight, height, tournaments, injuries, tests')
+        .select('id, category, position, status, birth_date, photo_url, id_card_front_url, id_card_back_url, performance, previous_team, description, weight, height, tournaments, injuries, tests, health_status')
         .order('id');
 
       if (playersError) {
@@ -154,6 +155,7 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
           tournaments: safeParse(p.tournaments, []),
           injuries: safeParse(p.injuries, []),
           tests: safeParse(p.tests, []),
+          health_status: p.health_status || 'Perfecto',
         };
       });
 
@@ -233,7 +235,9 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return null;
     const today = new Date();
-    const birth = new Date(birthDate);
+    // Manual parsing to avoid timezone offset
+    const [y, m, d] = birthDate.split('-');
+    const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -404,14 +408,30 @@ export function PlayersManagement({ user }: PlayersManagementProps) {
                       {player.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                     </span>
                   </div>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${player.status === 'active'
-                      ? 'bg-green-500/20 text-green-600 dark:text-green-400'
-                      : 'bg-gray-500/20 text-gray-600 dark:text-gray-400'
-                      }`}
-                  >
-                    {player.status === 'active' ? 'Activo' : 'Inactivo'}
-                  </span>
+                    <div className="flex flex-col items-end gap-1">
+                      {player.health_status === 'Inhabilitado' ? (
+                        <div className="flex flex-col items-end">
+                          <span className="p-1 rounded-full bg-red-500/20 text-red-500 shadow-sm border border-red-500/20">
+                            <Ambulance size={20} />
+                          </span>
+                          <span className="text-[9px] font-black uppercase text-red-500 mt-0.5">Inhabilitado</span>
+                        </div>
+                      ) : player.health_status === 'Con leves restricciones' ? (
+                        <div className="flex flex-col items-end">
+                          <span className="p-1 rounded-full bg-red-500/20 text-red-500 shadow-sm border border-red-500/20">
+                            <Plus size={20} />
+                          </span>
+                          <span className="text-[9px] font-black uppercase text-red-500 mt-0.5">Restricciones</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-end">
+                          <span className="p-1 rounded-full bg-green-500/20 text-green-500 shadow-sm border border-green-500/20">
+                            <Plus size={20} />
+                          </span>
+                          <span className="text-[9px] font-black uppercase text-green-500 mt-0.5">Perfecto</span>
+                        </div>
+                      )}
+                    </div>
                 </div>
 
                 <h3 className="text-foreground font-semibold text-lg mb-2">{player.name}</h3>

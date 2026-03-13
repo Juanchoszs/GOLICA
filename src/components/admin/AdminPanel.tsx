@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield, CalendarDays, BookOpen } from 'lucide-react';
+import { Users, Activity, UserCog, Settings, LogOut, Menu, X, Moon, Sun, Shield, CalendarDays, BookOpen, HeartPulse } from 'lucide-react';
 import { CallUpManager } from '../convocatorias/CallUpManager';
 import { PlayersManagement } from './PlayersManagement';
 import { CoachDashboard } from '../coach/CoachDashboard';
 import { CoachesManagement } from './CoachesManagement';
+import { PhysiotherapistsManagement } from './PhysiotherapistsManagement';
 import { CategoriesManagement } from './CategoriesManagement';
 import { PhysiotherapyManagement } from './PhysiotherapyManagement';
 import { useTheme } from '../ThemeContext';
@@ -31,6 +32,7 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
     { id: 'entrenador', label: 'Convocatorias', icon: UserCog, available: true },
     { id: 'planificaciones', label: 'Planificaciones', icon: CalendarDays, available: true },
     { id: 'gestion-entrenadores', label: 'Gestión Entrenadores', icon: Shield, available: true },
+    { id: 'gestion-fisioterapeutas', label: 'Gestión Fisioterapeutas', icon: HeartPulse, available: true },
     { id: 'administrativo', label: 'Gestión Categorías', icon: Settings, available: true },
     { id: 'fisioterapia', label: 'Fisioterapia', icon: Activity, available: true },
   ];
@@ -41,6 +43,8 @@ export function AdminPanel({ user, onLogout }: AdminPanelProps) {
         return <PlayersManagement user={user} />;
       case 'gestion-entrenadores':
         return <CoachesManagement />;
+      case 'gestion-fisioterapeutas':
+        return <PhysiotherapistsManagement />;
       case 'entrenador':
         return <CallUpManager allowedCategories={user.assigned_categories} />;
       case 'planificaciones':

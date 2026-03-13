@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
-import { Plus, Edit2, Eye, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Eye, ArrowLeft, History } from 'lucide-react';
 import { supabase } from '../../utils/supabase/client';
 import { toast } from 'sonner';
 
@@ -40,16 +40,18 @@ interface PhysiotherapyEvaluation {
   squat_movement_quality?: string;
   physiotherapist_note?: string;
   evolution_note?: string;
+  health_status?: string;
 }
 
 interface Player {
   id: string;
   name: string;
   identification: string;
-  age: number;
+  birth_date?: string;
+  health_status?: string;
 }
 
-type ViewType = 'list' | 'create' | 'edit' | 'view';
+type ViewType = 'list' | 'create' | 'edit' | 'view' | 'history';
 
 export function PhysiotherapyManagement() {
   const [viewType, setViewType] = useState<ViewType>('list');
@@ -60,18 +62,35 @@ export function PhysiotherapyManagement() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<PhysiotherapyEvaluation>>({
     evaluation_date: new Date().toISOString().split('T')[0],
+    health_status: 'Perfecto',
   });
+
+  const [historyPlayerId, setHistoryPlayerId] = useState<string | null>(null);
+  const [returnToTarget, setReturnToTarget] = useState<ViewType>('list');
 
   useEffect(() => {
     loadPlayers();
     loadEvaluations();
   }, []);
 
+  const calculateAge = (birthDate: string | undefined) => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const [y, m, d] = birthDate.split('-');
+    const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const loadPlayers = async () => {
     try {
       const { data, error } = await supabase
         .from('players')
-        .select('id, name, identification, age')
+        .select('id, name, identification, birth_date, health_status')
         .order('name');
 
       if (error) throw error;
@@ -110,26 +129,41 @@ export function PhysiotherapyManagement() {
     try {
       setLoading(true);
 
+      const evaluationData = { ...formData };
+      
       if (selectedEvaluation?.id) {
-        // Update existing
         const { error } = await supabase
           .from('physiotherapy_evaluations')
-          .update(formData)
+          .update(evaluationData)
           .eq('id', selectedEvaluation.id);
 
         if (error) throw error;
-        toast.success('Evaluación actualizada');
       } else {
-        // Create new
         const { error } = await supabase
           .from('physiotherapy_evaluations')
-          .insert([formData]);
+          .insert([evaluationData]);
 
         if (error) throw error;
-        toast.success('Evaluación creada');
+      }
+
+      if (formData.health_status) {
+        const { error: playerError } = await supabase
+          .from('players')
+          .update({ health_status: formData.health_status })
+          .eq('id', formData.player_id);
+          
+        if (playerError) {
+          console.error("Error updating player health status", playerError);
+          toast.warning('Evaluación guardada pero el estado de salud del jugador no se actualizó');
+        } else {
+          toast.success('Evaluación y estado de salud guardados de forma exitosa');
+        }
+      } else {
+        toast.success(selectedEvaluation?.id ? 'Evaluación actualizada' : 'Evaluación creada');
       }
 
       await loadEvaluations();
+      await loadPlayers();
       resetForm();
       setViewType('list');
     } catch (error) {
@@ -141,7 +175,7 @@ export function PhysiotherapyManagement() {
   };
 
   const resetForm = () => {
-    setFormData({ evaluation_date: new Date().toISOString().split('T')[0] });
+    setFormData({ evaluation_date: new Date().toISOString().split('T')[0], health_status: 'Perfecto' });
     setSelectedEvaluation(null);
   };
 
@@ -151,9 +185,15 @@ export function PhysiotherapyManagement() {
     setViewType('edit');
   };
 
-  const handleView = (evaluation: PhysiotherapyEvaluation) => {
+  const handleView = (evaluation: PhysiotherapyEvaluation, returnTo: ViewType = 'list') => {
     setSelectedEvaluation(evaluation);
+    setReturnToTarget(returnTo);
     setViewType('view');
+  };
+
+  const handleViewHistory = (playerId: string) => {
+    setHistoryPlayerId(playerId);
+    setViewType('history');
   };
 
   const filteredEvaluations = evaluations.filter(
@@ -163,6 +203,77 @@ export function PhysiotherapyManagement() {
   );
 
   const selectedPlayer = players.find((p) => p.id === formData.player_id);
+
+  // HISTORY VIEW
+  if (viewType === 'history' && historyPlayerId) {
+    const playerEvals = evaluations.filter(e => e.player_id === historyPlayerId);
+    const histPlayer = players.find(p => p.id === historyPlayerId);
+
+    return (
+      <div className="p-6 space-y-6 max-w-4xl">
+        <Button variant="outline" onClick={() => setViewType('list')} className="gap-2">
+          <ArrowLeft size={16} />
+          Volver
+        </Button>
+
+        <div>
+          <h2 className="text-3xl font-bold text-foreground">Historial Médico</h2>
+          <p className="text-muted-foreground mt-1">
+            Paciente: <span className="font-semibold text-foreground">{histPlayer?.name}</span> ({histPlayer?.identification})
+          </p>
+        </div>
+
+        {playerEvals.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-muted-foreground py-8">No hay registros para este jugador.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {playerEvals.map((evalRecord, idx) => (
+              <Card key={evalRecord.id || idx} className="hover:border-primary/50 transition-colors">
+                <CardContent className="pt-6">
+                  <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-lg text-foreground">
+                          {new Date(evalRecord.evaluation_date).toLocaleDateString()}
+                        </span>
+                        {evalRecord.health_status && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+                            evalRecord.health_status === 'Perfecto' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                            evalRecord.health_status === 'Con leves restricciones' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                            evalRecord.health_status === 'Inhabilitado' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                            'bg-muted text-muted-foreground border-border'
+                          }`}>
+                            {evalRecord.health_status}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">Evaluador: {evalRecord.evaluator_name || 'N/A'}</p>
+                      {(evalRecord.physiotherapist_note || evalRecord.evolution_note) && (
+                        <p className="text-sm text-foreground mt-2 line-clamp-2">
+                          <span className="font-semibold text-muted-foreground text-xs uppercase mr-1">Tópico:</span> 
+                          {evalRecord.evolution_note || evalRecord.physiotherapist_note}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleView(evalRecord, 'history')}>
+                        <Eye size={16} className="mr-2" />
+                        Ver Detalles
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // LIST VIEW
   if (viewType === 'list') {
@@ -208,10 +319,10 @@ export function PhysiotherapyManagement() {
             filteredEvaluations.map((evaluation) => (
               <Card key={evaluation.id} className="hover:bg-muted/50 transition-colors">
                 <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                     <div>
                       <p className="text-sm text-muted-foreground">Jugador</p>
-                      <p className="font-semibold text-foreground">{evaluation.player_name}</p>
+                      <p className="font-semibold text-foreground truncate">{evaluation.player_name}</p>
                       <p className="text-xs text-muted-foreground">{evaluation.player_identification}</p>
                     </div>
                     <div>
@@ -219,14 +330,26 @@ export function PhysiotherapyManagement() {
                       <p className="font-semibold text-foreground">{new Date(evaluation.evaluation_date).toLocaleDateString()}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Evaluador</p>
-                      <p className="font-semibold text-foreground">{evaluation.evaluator_name || 'No especificado'}</p>
+                      <p className="text-sm text-muted-foreground">Estado</p>
+                      {evaluation.health_status && (
+                        <div className={`mt-1 inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                          evaluation.health_status === 'Perfecto' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                          evaluation.health_status === 'Con leves restricciones' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                          evaluation.health_status === 'Inhabilitado' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          'bg-muted text-muted-foreground border-border'
+                        }`}>
+                          {evaluation.health_status}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-2 items-end justify-end">
-                      <Button variant="outline" size="sm" onClick={() => handleView(evaluation)}>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => handleViewHistory(evaluation.player_id)} title="Ver Historial Completo">
+                        <History size={16} />
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleView(evaluation, 'list')} title="Ver Detalles">
                         <Eye size={16} />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(evaluation)}>
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(evaluation)} title="Editar Evaluación">
                         <Edit2 size={16} />
                       </Button>
                     </div>
@@ -243,7 +366,7 @@ export function PhysiotherapyManagement() {
   if (viewType === 'view') {
     return (
       <div className="p-6 space-y-6 max-w-4xl">
-        <Button variant="outline" onClick={() => setViewType('list')} className="gap-2">
+        <Button variant="outline" onClick={() => setViewType(returnToTarget)} className="gap-2">
           <ArrowLeft size={16} />
           Volver
         </Button>
@@ -268,6 +391,21 @@ export function PhysiotherapyManagement() {
               <div>
                 <Label className="text-muted-foreground text-xs">Documento</Label>
                 <p className="font-semibold text-foreground">{selectedEvaluation?.player_identification || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="font-semibold text-foreground mb-4">Estado Actual</h3>
+              <div>
+                <Label className="text-muted-foreground text-xs">Estado de Salud</Label>
+                <div className={`mt-1 inline-flex px-3 py-1 rounded-full text-xs font-bold border ${
+                  selectedEvaluation?.health_status === 'Perfecto' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                  selectedEvaluation?.health_status === 'Con leves restricciones' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                  selectedEvaluation?.health_status === 'Inhabilitado' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                  'bg-muted text-muted-foreground border-border'
+                }`}>
+                  {selectedEvaluation?.health_status || 'Perfecto'}
+                </div>
               </div>
             </div>
 
@@ -338,7 +476,7 @@ export function PhysiotherapyManagement() {
                 <Edit2 size={16} />
                 Editar
               </Button>
-              <Button variant="outline" onClick={() => setViewType('list')}>
+              <Button variant="outline" onClick={() => setViewType(returnToTarget)}>
                 Cerrar
               </Button>
             </div>
@@ -375,7 +513,7 @@ export function PhysiotherapyManagement() {
                   player_id: value,
                   player_name: player.name,
                   player_identification: player.identification,
-                  player_age: player.age,
+                  player_age: calculateAge(player.birth_date),
                 });
               }
             }}>
@@ -397,7 +535,7 @@ export function PhysiotherapyManagement() {
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">Jugador seleccionado:</p>
               <p className="font-semibold text-foreground">{selectedPlayer.name}</p>
-              <p className="text-sm text-muted-foreground">ID: {selectedPlayer.identification} | Edad: {selectedPlayer.age}</p>
+              <p className="text-sm text-muted-foreground">ID: {selectedPlayer.identification} | Edad: {calculateAge(selectedPlayer.birth_date)}</p>
             </div>
           )}
 
@@ -472,6 +610,28 @@ export function PhysiotherapyManagement() {
                   onChange={(e) => setFormData({ ...formData, heart_rate_rest: e.target.value ? parseInt(e.target.value) : undefined })}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Current Health Status */}
+          <div className="border-t pt-6">
+            <h3 className="font-semibold text-foreground mb-4">Estado de Salud Actual</h3>
+            <div className="space-y-2 max-w-sm">
+              <Label htmlFor="health_status">Estado de Salud General *</Label>
+              <Select value={formData.health_status || 'Perfecto'} onValueChange={(value) => setFormData({ ...formData, health_status: value })}>
+                <SelectTrigger id="health_status" className={
+                  formData.health_status === 'Perfecto' ? 'border-green-500/50 text-green-600 font-medium' :
+                  formData.health_status === 'Con leves restricciones' ? 'border-amber-500/50 text-amber-600 font-medium' :
+                  formData.health_status === 'Inhabilitado' ? 'border-red-500/50 text-red-600 font-medium' : ''
+                }>
+                  <SelectValue placeholder="Selecciona el estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Perfecto" className="text-green-600 font-medium">Perfecto</SelectItem>
+                  <SelectItem value="Con leves restricciones" className="text-amber-600 font-medium">Con leves restricciones</SelectItem>
+                  <SelectItem value="Inhabilitado" className="text-red-600 font-medium">Inhabilitado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

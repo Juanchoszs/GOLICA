@@ -9,7 +9,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'coach' | 'player';
+  role: 'admin' | 'coach' | 'player' | 'physiotherapist';
   identification?: string;
   assigned_categories?: string[];
 }
@@ -70,7 +70,7 @@ async function fetchUserProfile(user: User): Promise<UserProfile | null> {
         id: authUserId,
         name: profile.name,
         email: profile.email,
-        role: profile.role as 'admin' | 'coach' | 'player',
+        role: profile.role as 'admin' | 'coach' | 'player' | 'physiotherapist',
         identification: profile.identification,
         assigned_categories: assignedCategories,
       };

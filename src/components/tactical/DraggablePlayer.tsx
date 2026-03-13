@@ -10,9 +10,12 @@ interface DraggablePlayerProps {
 }
 
 export function DraggablePlayer({ player, origin, isAssigned = false }: DraggablePlayerProps) {
+  const isDisabled = isAssigned || player.health_status === 'Inhabilitado';
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: player.id,
     data: { origin },
+    disabled: isDisabled,
   });
 
   const style = transform
@@ -40,8 +43,12 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
       >
         {/* Contenedor principal */}
         <div className="relative w-full h-full">
-          {/* Fondo con gradiente */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-200" />
+          {/* Fondo con gradiente y borde de estado */}
+          <div className={`absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-200 border-2 ${
+            player.health_status === 'Inhabilitado' ? 'border-red-500' :
+            player.health_status === 'Con leves restricciones' ? 'border-amber-500' :
+            'border-transparent'
+          }`} />
           
           {/* Borde superior colorido */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60 rounded-t-2xl" />
@@ -82,7 +89,7 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
         group relative
         w-24 mx-auto
         ${isDragging ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}
-        ${isAssigned ? 'opacity-50 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}
+        ${isAssigned || player.health_status === 'Inhabilitado' ? 'opacity-50 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}
         transition-all duration-200
       `}
     >
@@ -91,7 +98,7 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
         bg-card border border-border/50
         hover:border-primary/30 hover:bg-card/80
         transition-all duration-200
-        ${isAssigned ? 'bg-muted/50' : 'hover:shadow-md'}
+        ${isAssigned || player.health_status === 'Inhabilitado' ? 'bg-muted/50' : 'hover:shadow-md'}
       `}>
         {/* Avatar con foto de perfil */}
         <div className={`
@@ -138,6 +145,16 @@ export function DraggablePlayer({ player, origin, isAssigned = false }: Draggabl
         {isAssigned && (
           <div className="shrink-0 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
             <span className="text-[9px] font-bold text-primary uppercase">Asignado</span>
+          </div>
+        )}
+        
+        {/* Health status indicator */}
+        {player.health_status && player.health_status !== 'Perfecto' && (
+          <div className={`mt-1 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+            player.health_status === 'Con leves restricciones' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+            player.health_status === 'Inhabilitado' ? 'bg-red-500/10 text-red-500 border-red-500/20' : ''
+          }`}>
+            {player.health_status}
           </div>
         )}
         

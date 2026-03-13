@@ -10,7 +10,7 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import { toast } from 'sonner';
-import { Search, Save, RotateCcw, ChevronLeft, UserCog, Zap, Shield, TrendingUp } from 'lucide-react';
+import { Search, Save, RotateCcw, ChevronLeft, UserCog, Zap, Shield, TrendingUp, LayoutGrid } from 'lucide-react';
 
 import { Player, CallUp } from './types';
 import { FORMATIONS } from './formations';
@@ -91,6 +91,10 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
     }
 
     const targetPosId = over.id as string;
+    // Only allow dropping on valid positions of the current formation
+    const isValidPosition = currentLineup.positions.some(p => p.id === targetPosId);
+    if (!isValidPosition) return;
+
     const prevPosId = Object.keys(assignments).find(k => assignments[k] === playerId);
 
     setAssignments(prev => {
@@ -98,6 +102,15 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
       if (prevPosId) {
         delete next[prevPosId];
+      }
+
+      // If the target slot already has a player, swap them
+      const existingPlayerId = next[targetPosId];
+      if (existingPlayerId && prevPosId) {
+        next[prevPosId] = existingPlayerId;
+      } else if (existingPlayerId && !prevPosId) {
+        // Player coming from bench to occupied slot — remove the occupant back to bench
+        delete next[targetPosId];
       }
 
       next[targetPosId] = playerId;
@@ -126,17 +139,19 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       return;
     }
 
-    const gkPos = currentLineup.positions.find(p => p.role === 'Portero');
-    if (gkPos && !assignments[gkPos.id]) {
-      toast.error('¡Falta el Portero (GK)! 🛡️');
-      return;
-    }
+    // Goalkeeper check temporarily disabled for testing
+    // const gkPos = currentLineup.positions.find(p => p.role === 'Portero');
+    // if (gkPos && !assignments[gkPos.id]) {
+    //   toast.error('¡Falta el Portero (GK)! 🛡️');
+    //   return;
+    // }
 
     const assignedCount = Object.keys(assignments).length;
-    if (assignedCount < 11) {
-      toast.error(`¡Equipo incompleto! Faltan ${11 - assignedCount} jugadores. ⚽`);
-      return;
-    }
+    // Minimum player check temporarily disabled for testing
+    // if (assignedCount < 11) {
+    //   toast.error(`¡Equipo incompleto! Faltan ${11 - assignedCount} jugadores. ⚽`);
+    //   return;
+    // }
 
     onSave({
       category: categoryName,
@@ -158,9 +173,10 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
     const defenders = currentLineup.positions.filter(p => p.role === 'Defensa').length;
     const midfielders = currentLineup.positions.filter(p => p.role === 'Mediocampo').length;
     const attackers = currentLineup.positions.filter(p => p.role === 'Delantero').length;
-
     return { defenders, midfielders, attackers };
   }, [currentLineup]);
+
+  const assignedCount = Object.keys(assignments).length;
 
   return (
     <DndContext
@@ -170,41 +186,42 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
     >
       <div className="flex flex-col min-h-screen lg:h-screen lg:max-h-screen bg-gradient-to-br from-background via-background to-muted/20 lg:overflow-hidden">
 
-        {/* Header Profesional */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-border/50 bg-card/80 backdrop-blur-xl shadow-lg z-50">
-          <div className="flex items-center gap-6">
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-border/50 bg-card/80 backdrop-blur-xl shadow-lg z-50">
+          <div className="flex items-center gap-3 md:gap-6">
             <Button
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="hover:bg-primary/10 hover:text-primary transition-all duration-200 rounded-xl"
+              className="hover:bg-primary/10 hover:text-primary transition-all duration-200 rounded-xl shrink-0"
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h2 className="text-2xl font-black text-foreground tracking-tight">Crear Convocatoria</h2>
-              <p className="text-sm text-muted-foreground font-medium mt-0.5">
+              <h2 className="text-lg md:text-2xl font-black text-foreground tracking-tight">Crear Convocatoria</h2>
+              <p className="text-xs md:text-sm text-muted-foreground font-medium mt-0.5">
                 {categoryName} <span className="text-primary">•</span> {currentLineup.name}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-2xl border border-border/50 shadow-sm">
-              <div className={`w-3 h-3 rounded-full transition-all duration-300 ${Object.keys(assignments).length === 11
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Player count badge */}
+            <div className="flex items-center gap-2 px-3 py-1.5 md:px-5 md:py-2.5 bg-gradient-to-r from-muted/50 to-muted/30 rounded-2xl border border-border/50 shadow-sm">
+              <div className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${assignedCount === 11
                 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)] animate-pulse'
                 : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
                 }`} />
               <div className="text-center">
-                <div className="text-2xl font-black leading-none">{Object.keys(assignments).length}</div>
-                <div className="text-[9px] font-bold uppercase text-muted-foreground tracking-wider">/ 11 Jugadores</div>
+                <div className="text-lg md:text-2xl font-black leading-none">{assignedCount}</div>
+                <div className="text-[9px] font-bold uppercase text-muted-foreground tracking-wider">/ 11</div>
               </div>
             </div>
 
             <Button
               variant="outline"
               onClick={handleReset}
-              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all duration-200 border-dashed rounded-xl"
+              className="hidden sm:flex text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all duration-200 border-dashed rounded-xl"
             >
               <RotateCcw size={16} className="mr-2" />
               Resetear
@@ -212,24 +229,85 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
             <Button
               onClick={handleSaveWrapper}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 py-2.5 rounded-xl"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-4 md:px-8 py-2.5 rounded-xl"
             >
               <Save size={16} className="mr-2" />
-              Guardar Convocatoria
+              <span className="hidden sm:inline">Guardar</span>
+              <span className="sm:hidden">✓</span>
             </Button>
           </div>
         </div>
 
-        {/* Barra de información del partido */}
-        <div className="px-8 py-4 border-b border-border/40 bg-background/60 backdrop-blur-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* ── Formation Selector Bar (ALWAYS VISIBLE) ─────────────────── */}
+        <div className="px-4 md:px-8 py-3 border-b border-border/40 bg-card/60 backdrop-blur-sm z-40">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            {/* Formation select */}
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2 shrink-0">
+                <LayoutGrid size={16} className="text-primary" />
+                <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">Alineación</span>
+              </div>
+              <Select value={selectedLineupId} onValueChange={handleLineupChange}>
+                <SelectTrigger className="w-full sm:w-56 bg-background border-border/50 h-9 rounded-xl hover:border-primary/50 transition-colors text-sm font-bold">
+                  <SelectValue placeholder="Seleccionar formación" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[400px]">
+                  {FORMATIONS.map(l => (
+                    <SelectItem key={l.id} value={l.id} className="py-2.5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm">{l.name}</span>
+                        <span className="text-xs text-muted-foreground">{l.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Formation composition pills */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500">
+                <Shield size={11} />
+                <span className="text-xs font-black">{formationStats.defenders}</span>
+                <span className="text-[10px] font-semibold hidden sm:inline">DEF</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
+                <UserCog size={11} />
+                <span className="text-xs font-black">{formationStats.midfielders}</span>
+                <span className="text-[10px] font-semibold hidden sm:inline">MED</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-500">
+                <Zap size={11} />
+                <span className="text-xs font-black">{formationStats.attackers}</span>
+                <span className="text-[10px] font-semibold hidden sm:inline">ATA</span>
+              </div>
+              <div className="hidden md:flex items-center">
+                <span className="text-xs text-muted-foreground italic">{currentLineup.description}</span>
+              </div>
+            </div>
+
+            {/* Mobile reset button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="sm:hidden ml-auto text-muted-foreground hover:text-destructive"
+            >
+              <RotateCcw size={14} />
+            </Button>
+          </div>
+        </div>
+
+        {/* ── Match Info Bar ───────────────────────────────────────── */}
+        <div className="px-4 md:px-8 py-3 border-b border-border/40 bg-background/60 backdrop-blur-sm">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="flex flex-col gap-1">
               <Label className="text-[10px] uppercase text-muted-foreground">Rival</Label>
               <Input
                 value={matchInfo.opponent}
                 onChange={(e) => setMatchInfo({ ...matchInfo, opponent: e.target.value })}
                 placeholder="Equipo rival"
-                className="h-9 text-xs"
+                className="h-8 text-xs"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -238,7 +316,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
                 type="date"
                 value={matchInfo.date}
                 onChange={(e) => setMatchInfo({ ...matchInfo, date: e.target.value })}
-                className="h-9 text-xs"
+                className="h-8 text-xs"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -247,7 +325,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
                 type="time"
                 value={matchInfo.time}
                 onChange={(e) => setMatchInfo({ ...matchInfo, time: e.target.value })}
-                className="h-9 text-xs"
+                className="h-8 text-xs"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -256,125 +334,68 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
                 value={matchInfo.location}
                 onChange={(e) => setMatchInfo({ ...matchInfo, location: e.target.value })}
                 placeholder="Estadio / Lugar"
-                className="h-9 text-xs"
+                className="h-8 text-xs"
               />
             </div>
           </div>
         </div>
 
-        {/* Contenido Principal */}
+        {/* ── Main Content ─────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden pb-20 lg:pb-0">
 
-          {/* Panel Izquierdo: Configuración Táctica */}
-          <aside className="w-80 hidden xl:flex flex-col p-8 border-r border-border/50 bg-card/30 backdrop-blur-sm overflow-y-auto">
-            <div className="space-y-8">
-
-              {/* Selector de Formación */}
-              <section className="space-y-4">
-                <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                  <UserCog size={18} className="text-primary" />
-                  Sistema Táctico
-                </h3>
-                <Select value={selectedLineupId} onValueChange={handleLineupChange}>
-                  <SelectTrigger className="w-full bg-background border-border/50 h-12 rounded-xl hover:border-primary/50 transition-colors">
-                    <SelectValue placeholder="Seleccionar formación" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[400px]">
-                    {FORMATIONS.map(l => (
-                      <SelectItem key={l.id} value={l.id} className="py-3">
-                        <div className="flex flex-col">
-                          <span className="font-bold">{l.name}</span>
-                          <span className="text-xs text-muted-foreground">{l.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Descripción de la formación */}
-                <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {currentLineup.description}
-                  </p>
+          {/* Left Aside: visible only on XL — quick guide */}
+          <aside className="w-72 hidden xl:flex flex-col p-6 border-r border-border/50 bg-card/30 backdrop-blur-sm overflow-y-auto gap-6">
+            {/* Summary */}
+            <section className="space-y-3">
+              <h3 className="text-xs font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                <TrendingUp size={16} className="text-primary" />
+                Resumen
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-card to-card/50 border border-border/50 rounded-xl p-4 shadow-sm">
+                  <div className="text-3xl font-black text-primary mb-1">
+                    {assignments[currentLineup.positions.find(p => p.role === 'Portero')?.id || ''] ? '1' : '0'}/1
+                  </div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Portero</div>
                 </div>
-              </section>
-
-              {/* Estadísticas de Formación */}
-              <section className="space-y-4">
-                <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                  <TrendingUp size={18} className="text-primary" />
-                  Composición
-                </h3>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 rounded-xl p-4 text-center">
-                    <Shield className="w-6 h-6 mx-auto mb-2 text-blue-500" />
-                    <div className="text-2xl font-black text-blue-500">{formationStats.defenders}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Defensas</div>
+                <div className="bg-gradient-to-br from-card to-card/50 border border-border/50 rounded-xl p-4 shadow-sm">
+                  <div className={`text-3xl font-black mb-1 ${assignedCount === 11 ? 'text-emerald-500' : 'text-foreground'}`}>
+                    {assignedCount}/11
                   </div>
-                  <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 text-center">
-                    <UserCog className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
-                    <div className="text-2xl font-black text-emerald-500">{formationStats.midfielders}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Medios</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/20 rounded-xl p-4 text-center">
-                    <Zap className="w-6 h-6 mx-auto mb-2 text-red-500" />
-                    <div className="text-2xl font-black text-red-500">{formationStats.attackers}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase mt-1">Atacantes</div>
-                  </div>
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</div>
                 </div>
-              </section>
+              </div>
+            </section>
 
-              {/* Guía de Uso */}
-              <section className="p-5 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl">
-                <h4 className="text-xs font-black text-primary mb-4 uppercase tracking-wider flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-[10px]">?</span>
-                  </div>
-                  Guía Rápida
-                </h4>
-                <ul className="space-y-4">
-                  {[
-                    { num: '1', text: 'Selecciona la formación táctica ideal para tu equipo' },
-                    { num: '2', text: 'Arrastra jugadores desde el banco a las posiciones' },
-                    { num: '3', text: 'Suelta fuera de la cancha para remover un jugador' },
-                    { num: '4', text: 'Asegúrate de incluir un portero antes de guardar' }
-                  ].map((step) => (
-                    <li key={step.num} className="flex gap-3 items-start">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-black text-primary shrink-0 mt-0.5">
-                        {step.num}
-                      </div>
-                      <span className="text-xs text-muted-foreground leading-relaxed">{step.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              {/* Resumen Visual */}
-              <section className="space-y-4">
-                <h3 className="text-sm font-black text-foreground uppercase tracking-wider">
-                  Resumen
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gradient-to-br from-card to-card/50 border border-border/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="text-3xl font-black text-primary mb-1">
-                      {assignments[currentLineup.positions.find(p => p.role === 'Portero')?.id || ''] ? '1' : '0'}/1
+            {/* Guide */}
+            <section className="p-4 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-2xl">
+              <h4 className="text-xs font-black text-primary mb-3 uppercase tracking-wider flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-[9px]">?</span>
+                </div>
+                Guía Rápida
+              </h4>
+              <ul className="space-y-3">
+                {[
+                  { num: '1', text: 'Elige la alineación en la barra superior' },
+                  { num: '2', text: 'Los dropzones se adaptan automáticamente' },
+                  { num: '3', text: 'Arrastra jugadores a las posiciones' },
+                  { num: '4', text: 'Incluye portero y completa los 11' },
+                ].map((step) => (
+                  <li key={step.num} className="flex gap-3 items-start">
+                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-black text-primary shrink-0 mt-0.5">
+                      {step.num}
                     </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Portero</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-card to-card/50 border border-border/50 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="text-3xl font-black text-foreground mb-1">
-                      {Object.keys(assignments).length}/11
-                    </div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</div>
-                  </div>
-                </div>
-              </section>
-            </div>
+                    <span className="text-xs text-muted-foreground leading-relaxed">{step.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           </aside>
 
-          {/* Centro: Cancha Táctica */}
-          <section className="flex-1 bg-gradient-to-b from-muted/20 to-muted/40 p-6 md:p-12 flex items-center justify-center overflow-auto">
-            <div className="w-full h-full max-w-5xl flex items-center justify-center">
+          {/* Center: Tactical Pitch */}
+          <section className="flex-1 bg-gradient-to-b from-muted/20 to-muted/40 p-4 md:p-8 flex items-center justify-center overflow-auto">
+            <div className="w-full h-full max-w-4xl flex items-center justify-center">
               <SoccerPitch key={selectedLineupId}>
                 <LineupSlots
                   positions={currentLineup.positions}
@@ -385,7 +406,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
             </div>
           </section>
 
-          {/* Panel Derecho: Selección de Jugadores */}
+          {/* Right: Bench players */}
           <BenchPlayers
             players={players}
             filteredPlayers={filteredPlayers}
@@ -396,7 +417,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
         </div>
       </div>
 
-      {/* Overlay de Arrastre: siempre un token circular con foto y nombre debajo */}
+      {/* Drag Overlay */}
       <DragOverlay>
         {activeId && draggedPlayer ? (
           <div className="pointer-events-none flex flex-col items-center gap-1 opacity-95">

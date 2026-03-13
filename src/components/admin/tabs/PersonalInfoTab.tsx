@@ -5,7 +5,7 @@ import { Label } from '../../ui/label';
 import { Textarea } from '../../ui/textarea';
 import { Card } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { User, Camera, Upload, Heart, Trophy, AlertCircle } from 'lucide-react';
+import { User, Camera, Upload, Heart, Trophy, AlertCircle, Ambulance, Plus } from 'lucide-react';
 
 interface PersonalInfoTabProps {
   editedPlayer: any;
@@ -37,7 +37,8 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return 'N/A';
     const today = new Date();
-    const birth = new Date(birthDate);
+    const [y, m, d] = birthDate.split('-');
+    const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -48,7 +49,8 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
+    const [y, m, d] = dateString.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     return date.toLocaleDateString('es-CO', {
       year: 'numeric',
       month: 'short',
@@ -272,16 +274,15 @@ export function PersonalInfoTab({ editedPlayer, setEditedPlayer, setEditingImage
               />
             </div>
             <div>
-              <Label className="text-foreground">Estado</Label>
-              <select
-                value={editedPlayer.status}
-                onChange={(e) => setEditedPlayer({ ...editedPlayer, status: e.target.value })}
-                className="w-full px-3 py-2 rounded-md bg-input-background border border-border text-foreground"
-              >
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-                <option value="injured">Lesionado</option>
-              </select>
+              <Label className="text-foreground">Estado de Salud (Fisioterapia)</Label>
+              <div className={`mt-1 flex items-center gap-3 px-3 py-2 rounded-md border text-sm font-bold ${editedPlayer.health_status === 'Perfecto' ? 'bg-green-500/10 border-green-500/20 text-green-500' :
+                editedPlayer.health_status === 'Con leves restricciones' ? 'bg-red-500/10 border-red-500/20 text-red-500' :
+                  'bg-red-500/10 border-red-500/20 text-red-500'
+                }`}>
+                {editedPlayer.health_status === 'Inhabilitado' ? <Ambulance size={18} /> : <Plus size={18} />}
+                {editedPlayer.health_status || 'Perfecto'}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 tracking-tight italic">* Solo modificable desde el apartado de Fisioterapia</p>
             </div>
             <div>
               <Label className="text-foreground">Descripción del Jugador</Label>

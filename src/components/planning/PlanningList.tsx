@@ -238,7 +238,7 @@ export const PlanningList: React.FC<PlanningListProps> = ({
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold">📋 Planificaciones</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -247,7 +247,7 @@ export const PlanningList: React.FC<PlanningListProps> = ({
               : 'Crea y edita tus sesiones de entrenamiento'}
           </p>
         </div>
-        <Button onClick={handleCreateNew} className="gap-2">
+        <Button onClick={handleCreateNew} className="gap-2 w-full sm:w-auto">
           <Plus size={18} />
           Nueva Sesión
         </Button>
@@ -301,13 +301,14 @@ export const PlanningList: React.FC<PlanningListProps> = ({
       {/* Admin: Show Other Coaches Sessions */}
       {allSessionsRole === 'admin' && allCoachSessions.length > 0 && (
         <div className="mt-8 pt-8 border-t space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 className="text-2xl font-bold">👨‍🏫 Sesiones de Entrenadores</h3>
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => setShowAllSessions(!showAllSessions)}
             >
-              {showAllSessions ? 'Ocultar' : 'Ver All'}
+              {showAllSessions ? 'Ocultar' : 'Ver Todas'}
             </Button>
           </div>
 
