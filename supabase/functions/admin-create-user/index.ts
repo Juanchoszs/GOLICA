@@ -60,7 +60,12 @@ serve(async (req: Request) => {
             throw new Error('Cuerpo de la petición inválido')
         }
         
-        const { email, password, name, role, identification, phone, category, position, assigned_categories, birth_date, previous_team, description } = body
+        const { 
+            email, password, name, role, identification, phone, 
+            category, position, assigned_categories, birth_date, 
+            previous_team, description, 
+            is_chief, reports_to 
+        } = body
 
         // Validaciones
         if (!email || !password || !name || !identification) {
@@ -291,6 +296,27 @@ serve(async (req: Request) => {
                         // as the coach and profile are already there, but we log the error.
                     }
                 }
+            }
+        } else if (role === 'physiotherapist') {
+            console.log('Inserting physiotherapist record for ID:', userId)
+            const { error: physioError } = await supabaseClient
+                .from('physiotherapists')
+                .upsert([{ 
+                    id: userId, 
+                    assigned_categories: assigned_categories || [],
+                    is_chief: is_chief || false,
+                    reports_to: reports_to || null
+                }])
+
+            if (physioError) {
+                console.error('Error inserting physiotherapist:', physioError)
+                // Rollback if needed
+                try {
+                    await supabaseClient.auth.admin.deleteUser(userId)
+                } catch (rollbackErr) {
+                    console.error('Rollback error deleting auth user:', rollbackErr)
+                }
+                throw new Error(`No se pudo crear el registro de fisioterapeuta: ${physioError.message}`)
             }
         }
 

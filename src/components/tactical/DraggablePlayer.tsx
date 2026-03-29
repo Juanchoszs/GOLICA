@@ -10,7 +10,7 @@ interface DraggablePlayerProps {
 }
 
 export function DraggablePlayer({ player, origin, isAssigned = false }: DraggablePlayerProps) {
-  const isDisabled = isAssigned || player.health_status === 'Inhabilitado';
+  const isDisabled = player.health_status === 'Inhabilitado';
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: player.id,

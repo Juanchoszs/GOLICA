@@ -66,15 +66,20 @@ export function CoachesManagement() {
             if (error) throw error;
 
             // Flatten data
-            const formattedCoaches = data?.map(p => ({
-                id: p.id,
-                name: p.name || 'Sin nombre',
-                email: p.email || 'Sin email',
-                identification: p.identification || '',
-                phone: p.phone || '',
-                initial_password: p.initial_password,
-                assigned_categories: p.coaches?.[0]?.assigned_categories || []
-            })) || [];
+            const formattedCoaches = data?.map(p => {
+                // Supabase might return coaches as an array or a single object depending on the relationship configuration
+                const coachData = Array.isArray(p.coaches) ? p.coaches[0] : p.coaches;
+                
+                return {
+                    id: p.id,
+                    name: p.name || 'Sin nombre',
+                    email: p.email || 'Sin email',
+                    identification: p.identification || '',
+                    phone: p.phone || '',
+                    initial_password: p.initial_password,
+                    assigned_categories: coachData?.assigned_categories || []
+                };
+            }) || [];
 
             setCoaches(formattedCoaches);
         } catch (error) {
@@ -125,13 +130,35 @@ export function CoachesManagement() {
 
             if (profileError) throw profileError;
 
-            // Actualizar coach metadata
+            // Actualizar coach metadata (Usamos upsert para asegurar que el registro existe)
             const { error: coachError } = await supabase
                 .from('coaches')
-                .update({ assigned_categories: editedCategories })
-                .eq('id', id);
+                .upsert({ 
+                    id: id, 
+                    assigned_categories: editedCategories 
+                }, { onConflict: 'id' });
 
             if (coachError) throw coachError;
+
+            // Sincronizar tabla puente coach_categories
+            // 1. Obtener IDs de las categorías seleccionadas
+            const { data: catData } = await supabase
+                .from('categories')
+                .select('id')
+                .in('name', editedCategories);
+
+            // 2. Eliminar asociaciones previas
+            await supabase.from('coach_categories').delete().eq('coach_id', id);
+
+            // 3. Insertar nuevas asociaciones
+            if (catData && catData.length > 0) {
+                const associations = catData.map(cat => ({
+                    coach_id: id,
+                    category_id: cat.id
+                }));
+                const { error: bridgeError } = await supabase.from('coach_categories').insert(associations);
+                if (bridgeError) console.error('Error updating bridge table:', bridgeError);
+            }
 
             toast.success('Datos actualizados correctamente');
             fetchCoaches();

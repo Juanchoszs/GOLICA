@@ -26,7 +26,8 @@ export const generatePlayerSheet = async (player: any) => {
     const rawDate = birthDate || birth_date;
     if (!rawDate) return 'N/A';
     const today = new Date();
-    const birth = new Date(rawDate);
+    const [y, m, d] = rawDate.split('-');
+    const birth = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isNaN(birth.getTime())) return 'N/A';
 
     let age = today.getFullYear() - birth.getFullYear();
@@ -39,7 +40,8 @@ export const generatePlayerSheet = async (player: any) => {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
+    const [y, m, d] = dateString.split('-');
+    const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     if (isNaN(date.getTime())) return 'N/A';
     return date.toLocaleDateString('es-CO', {
       year: 'numeric',

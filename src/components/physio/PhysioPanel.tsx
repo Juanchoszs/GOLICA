@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Button } from '../ui/button';
-import { Activity, LogOut, Menu, X, Moon, Sun } from 'lucide-react';
+import { Activity, LogOut, Menu, X, Moon, Sun, ClipboardList, Users, ShieldCheck } from 'lucide-react';
 import { PhysiotherapyManagement } from '../admin/PhysiotherapyManagement';
+import { PhysioDailyTracking } from './PhysioDailyTracking';
+import { PhysioSupervision } from './PhysioSupervision';
 import { useTheme } from '../ThemeContext';
+import { supabase } from '../../utils/supabase/client';
 
 interface PhysioPanelProps {
   user: any;
@@ -11,7 +14,10 @@ interface PhysioPanelProps {
 
 export function PhysioPanel({ user, onLogout }: PhysioPanelProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'evaluations' | 'tracking' | 'supervision'>('tracking');
   const { theme, toggleTheme } = useTheme();
+
+  const isChief = user.is_chief || user.role === 'admin';
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -49,7 +55,9 @@ export function PhysioPanel({ user, onLogout }: PhysioPanelProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-foreground text-sm font-medium truncate">{user.name}</p>
-                <p className="text-muted-foreground text-xs truncate">Fisioterapeuta</p>
+                <p className="text-muted-foreground text-xs truncate">
+                  {user.is_chief ? 'Jefe de Fisioterapia' : 'Fisioterapeuta'}
+                </p>
               </div>
             </div>
           </div>
@@ -58,12 +66,33 @@ export function PhysioPanel({ user, onLogout }: PhysioPanelProps) {
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           <Button
-            variant="default"
-            className="w-full justify-start bg-primary text-primary-foreground"
+            variant={activeTab === 'tracking' ? 'default' : 'ghost'}
+            className={`w-full justify-start ${activeTab === 'tracking' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}`}
+            onClick={() => setActiveTab('tracking')}
           >
             <Activity size={20} className={sidebarOpen ? 'mr-3' : ''} />
-            {sidebarOpen && <span>Gestión Fisioterapia</span>}
+            {sidebarOpen && <span>Seguimiento Diario</span>}
           </Button>
+
+          <Button
+            variant={activeTab === 'evaluations' ? 'default' : 'ghost'}
+            className={`w-full justify-start ${activeTab === 'evaluations' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}`}
+            onClick={() => setActiveTab('evaluations')}
+          >
+            <ClipboardList size={20} className={sidebarOpen ? 'mr-3' : ''} />
+            {sidebarOpen && <span>Valoraciones</span>}
+          </Button>
+
+          {isChief && (
+            <Button
+              variant={activeTab === 'supervision' ? 'default' : 'ghost'}
+              className={`w-full justify-start ${activeTab === 'supervision' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted'}`}
+              onClick={() => setActiveTab('supervision')}
+            >
+              <ShieldCheck size={20} className={sidebarOpen ? 'mr-3' : ''} />
+              {sidebarOpen && <span>Supervisión</span>}
+            </Button>
+          )}
         </nav>
 
         {/* Footer Actions */}
@@ -98,11 +127,18 @@ export function PhysioPanel({ user, onLogout }: PhysioPanelProps) {
           >
             <Menu size={20} />
           </Button>
-          <h2 className="text-foreground font-semibold">Panel Fisioterapia</h2>
+          <h2 className="text-foreground font-semibold">
+            {activeTab === 'tracking' ? 'Seguimiento Diario' : 
+             activeTab === 'evaluations' ? 'Valoraciones' : 'Supervisión'}
+          </h2>
           <div className="w-10" />
         </div>
 
-        <PhysiotherapyManagement />
+        <div className="animate-in fade-in duration-500">
+          {activeTab === 'tracking' && <PhysioDailyTracking user={user} />}
+          {activeTab === 'evaluations' && <PhysiotherapyManagement />}
+          {activeTab === 'supervision' && <PhysioSupervision user={user} />}
+        </div>
       </main>
     </div>
   );

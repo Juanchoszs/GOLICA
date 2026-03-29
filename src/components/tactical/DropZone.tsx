@@ -82,7 +82,7 @@ export function DropZone({ position, assignedPlayer }: DropZoneProps) {
             rounded-2xl
             bg-gradient-to-br ${colors.bg}
             border-2 ${colors.border}
-            ${isOver ? `${colors.glow} scale-110` : 'scale-100'}
+            ${isOver ? `${colors.glow} scale-110 ring-4 ring-primary/40` : 'scale-100'}
             transition-all duration-300
             cursor-pointer
             flex flex-col items-center justify-center

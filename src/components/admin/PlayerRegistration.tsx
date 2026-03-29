@@ -76,7 +76,7 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
     const password = generateSecurePassword(formData.name, formData.identification);
     
     // Generate email from identification if not provided
-    const emailToUse = formData.email || `jugador.${formData.identification.replace(/\s/g, '')}@golica.local`;
+    const emailToUse = formData.email;
 
     try {
       // Usar la función de Supabase para crear el usuario de forma segura
@@ -267,16 +267,16 @@ export function PlayerRegistration({ onBack }: PlayerRegistrationProps) {
 
                 <div>
                   <Label className="text-foreground">
-                    Email <span className="text-muted-foreground text-xs">(opcional)</span>
+                    Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="jugador@email.com (si no se proporciona, se generará uno automático)"
+                    required
+                    placeholder="jugador@email.com"
                     className="bg-input-background border-border text-foreground"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Si dejas vacío, se generará automáticamente</p>
                 </div>
 
                 <div>

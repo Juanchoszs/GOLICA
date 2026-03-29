@@ -12,6 +12,8 @@ export interface UserProfile {
   role: 'admin' | 'coach' | 'player' | 'physiotherapist';
   identification?: string;
   assigned_categories?: string[];
+  is_chief?: boolean;
+  reports_to?: string;
 }
 
 interface AuthState {
@@ -66,6 +68,27 @@ async function fetchUserProfile(user: User): Promise<UserProfile | null> {
         }
       }
 
+      let isChief = false;
+      let reportsTo: string | undefined;
+
+      if (profile.role === 'physiotherapist') {
+        try {
+          const { data: physioData } = await supabase
+            .from('physiotherapists')
+            .select('assigned_categories, is_chief, reports_to')
+            .eq('id', authUserId)
+            .maybeSingle();
+
+          if (physioData) {
+            assignedCategories = physioData.assigned_categories;
+            isChief = physioData.is_chief || false;
+            reportsTo = physioData.reports_to;
+          }
+        } catch (err) {
+          console.error('Error fetching physio data:', err);
+        }
+      }
+
       return {
         id: authUserId,
         name: profile.name,
@@ -73,6 +96,8 @@ async function fetchUserProfile(user: User): Promise<UserProfile | null> {
         role: profile.role as 'admin' | 'coach' | 'player' | 'physiotherapist',
         identification: profile.identification,
         assigned_categories: assignedCategories,
+        is_chief: isChief,
+        reports_to: reportsTo,
       };
     }
   } catch (err) {

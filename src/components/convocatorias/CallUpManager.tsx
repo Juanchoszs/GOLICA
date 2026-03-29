@@ -41,9 +41,12 @@ export function CallUpManager({ allowedCategories }: CallUpManagerProps) {
 
       const categoryNames = (data || []).map(c => c.name);
 
-      if (allowedCategories && allowedCategories.length > 0) {
+      if (allowedCategories) {
+        // If categories are restricted, only show those included in the allowed list
+        // If the list is empty, show nothing (filter will return empty)
         setCategories(categoryNames.filter(c => allowedCategories.includes(c)));
       } else {
+        // If no restriction provided (admin view), show everything
         setCategories(categoryNames);
       }
     } catch (err) {

@@ -24,6 +24,8 @@ export function PhysiotherapistsManagement() {
     const [editedCategories, setEditedCategories] = useState<string[]>([]);
     const [editedIdentification, setEditedIdentification] = useState('');
     const [editedPassword, setEditedPassword] = useState('');
+    const [editedIsChief, setEditedIsChief] = useState(false);
+    const [editedReportsTo, setEditedReportsTo] = useState('');
 
     // Add state
     const [newPhysiotherapist, setNewPhysiotherapist] = useState({
@@ -32,7 +34,9 @@ export function PhysiotherapistsManagement() {
         identification: '',
         phone: '',
         password: '',
-        categories: [] as string[]
+        categories: [] as string[],
+        is_chief: false,
+        reports_to: ''
     });
     const [showPassword, setShowPassword] = useState(false);
 
@@ -73,7 +77,9 @@ export function PhysiotherapistsManagement() {
                 identification: p.identification || '',
                 phone: p.phone || '',
                 initial_password: p.initial_password,
-                assigned_categories: p.physiotherapists?.[0]?.assigned_categories || []
+                assigned_categories: p.physiotherapists?.[0]?.assigned_categories || [],
+                is_chief: p.physiotherapists?.[0]?.is_chief || false,
+                reports_to: p.physiotherapists?.[0]?.reports_to || ''
             })) || [];
 
             setPhysiotherapists(formattedPhysiotherapists);
@@ -90,6 +96,8 @@ export function PhysiotherapistsManagement() {
         setEditedCategories(physiotherapist.assigned_categories || []);
         setEditedIdentification(physiotherapist.identification || '');
         setEditedPassword('');
+        setEditedIsChief(physiotherapist.is_chief || false);
+        setEditedReportsTo(physiotherapist.reports_to || '');
     };
 
     const handleCancel = () => {
@@ -128,7 +136,11 @@ export function PhysiotherapistsManagement() {
             // Actualizar physiotherapist metadata
             const { error: physiotherapistError } = await supabase
                 .from('physiotherapists')
-                .update({ assigned_categories: editedCategories })
+                .update({ 
+                    assigned_categories: categories, // Assign all categories on save/update
+                    is_chief: editedIsChief,
+                    reports_to: editedReportsTo || null
+                })
                 .eq('id', id);
 
             if (physiotherapistError) throw physiotherapistError;
@@ -183,7 +195,9 @@ export function PhysiotherapistsManagement() {
                     role: 'physiotherapist',
                     identification: newPhysiotherapist.identification,
                     phone: newPhysiotherapist.phone,
-                    assigned_categories: newPhysiotherapist.categories
+                    assigned_categories: categories, // Assign all categories by default
+                    is_chief: newPhysiotherapist.is_chief,
+                    reports_to: newPhysiotherapist.reports_to || null
                 }
             });
 
@@ -213,7 +227,9 @@ export function PhysiotherapistsManagement() {
                 identification: '',
                 phone: '',
                 password: '',
-                categories: []
+                categories: [],
+                is_chief: false,
+                reports_to: ''
             });
             fetchPhysiotherapists();
         } catch (error: any) {
@@ -359,19 +375,41 @@ export function PhysiotherapistsManagement() {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                            <div className="flex items-center space-x-2 p-2 rounded-md hover:bg-muted/50 transition-colors">
+                                <Checkbox 
+                                    id="is_chief" 
+                                    checked={newPhysiotherapist.is_chief}
+                                    onCheckedChange={(checked) => setNewPhysiotherapist({...newPhysiotherapist, is_chief: checked as boolean})}
+                                />
+                                <div className="grid gap-1.5 leading-none">
+                                    <label htmlFor="is_chief" className="text-sm font-medium cursor-pointer">Es Jefe de Area</label>
+                                    <p className="text-[10px] text-muted-foreground">Puede supervisar a otros fisioterapeutas</p>
+                                </div>
+                            </div>
+
+                            {!newPhysiotherapist.is_chief && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="reports_to">Reporta a (Jefe)</Label>
+                                    <select 
+                                        id="reports_to"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={newPhysiotherapist.reports_to}
+                                        onChange={(e) => setNewPhysiotherapist({...newPhysiotherapist, reports_to: e.target.value})}
+                                    >
+                                        <option value="">Seleccionar Jefe...</option>
+                                        {physiotherapists.filter(p => p.is_chief).map(chief => (
+                                            <option key={chief.id} value={chief.id}>{chief.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="space-y-2">
-                            <Label>Categorías Asignadas</Label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 border border-border rounded-md">
-                                {categories.map(cat => (
-                                    <div key={cat} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={`new-${cat}`}
-                                            checked={newPhysiotherapist.categories.includes(cat)}
-                                            onCheckedChange={() => toggleCategory(cat, true)}
-                                        />
-                                        <label htmlFor={`new-${cat}`} className="text-sm cursor-pointer">{cat}</label>
-                                    </div>
-                                ))}
+                            <Label>Acceso a Categorías</Label>
+                            <div className="p-3 bg-primary/5 border border-primary/20 rounded-md text-sm text-primary font-medium">
+                                Todos los fisioterapeutas tienen acceso a TODAS las categorías por defecto.
                             </div>
                         </div>
 
@@ -400,6 +438,7 @@ export function PhysiotherapistsManagement() {
                             <TableHead className="w-[200px]">Nombre</TableHead>
                             <TableHead>Email e Identificación</TableHead>
                             <TableHead>Categorías</TableHead>
+                            <TableHead>Jerarquía</TableHead>
                             <TableHead className="text-right w-[100px]">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -436,31 +475,54 @@ export function PhysiotherapistsManagement() {
                                         )}
                                     </TableCell>
                                     <TableCell className="py-4 align-top">
+                                        <div className="flex flex-wrap gap-1">
+                                            <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] border border-primary/20 font-semibold italic">
+                                                Todas las categorías
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 align-top">
                                         {isEditing ? (
-                                            <div className="grid grid-cols-2 gap-2 p-2 border border-border rounded-md">
-                                                {categories.map(cat => (
-                                                    <div key={cat} className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={`edit-${cat}`}
-                                                            checked={editedCategories.includes(cat)}
-                                                            onCheckedChange={() => toggleCategory(cat)}
-                                                        />
-                                                        <label htmlFor={`edit-${cat}`} className="text-xs cursor-pointer">{cat}</label>
+                                            <div className="space-y-3 p-2 bg-muted/30 rounded-md border border-border/50">
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox 
+                                                        id="edit_is_chief" 
+                                                        checked={editedIsChief}
+                                                        onCheckedChange={(checked) => setEditedIsChief(checked as boolean)}
+                                                    />
+                                                    <label htmlFor="edit_is_chief" className="text-xs font-medium cursor-pointer">Es Jefe de Area</label>
+                                                </div>
+                                                {!editedIsChief && (
+                                                    <div className="space-y-1">
+                                                        <Label className="text-[10px]">Reporta a</Label>
+                                                        <select 
+                                                            className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs focus-visible:outline-none"
+                                                            value={editedReportsTo}
+                                                            onChange={(e) => setEditedReportsTo(e.target.value)}
+                                                        >
+                                                            <option value="">Sin Jefe</option>
+                                                            {physiotherapists.filter(p => p.is_chief && p.id !== editingPhysiotherapistId).map(chief => (
+                                                                <option key={chief.id} value={chief.id}>{chief.name}</option>
+                                                            ))}
+                                                        </select>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-wrap gap-1">
-                                                {physiotherapist.assigned_categories?.length > 0 ? (
-                                                    physiotherapist.assigned_categories.map((cat: string) => (
-                                                        <span key={cat} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] border border-primary/20">
-                                                            {cat}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-muted-foreground text-xs italic">Sin asignar</span>
                                                 )}
                                             </div>
+                                        ) : (
+                                            <>
+                                                {physiotherapist.is_chief ? (
+                                                    <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] border border-blue-500/20 font-bold uppercase">
+                                                        Jefe de Área
+                                                    </span>
+                                                ) : (
+                                                    <div className="text-[10px]">
+                                                        <span className="text-muted-foreground mr-1">Reporta a:</span>
+                                                        <span className="text-foreground font-medium">
+                                                            {physiotherapists.find(p => p.id === physiotherapist.reports_to)?.name || 'Directo'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right align-top py-4">

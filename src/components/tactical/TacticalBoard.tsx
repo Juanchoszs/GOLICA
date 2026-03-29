@@ -47,7 +47,7 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
       activationConstraint: { distance: 10 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
+      activationConstraint: { delay: 150, tolerance: 10 },
     })
   );
 
@@ -99,18 +99,28 @@ export function TacticalBoard({ players, categoryName, onSave, onClose }: Tactic
 
     setAssignments(prev => {
       const next = { ...prev };
-
+      
+      // If the player was already assigned elsewhere, clear that position
       if (prevPosId) {
         delete next[prevPosId];
       }
 
-      // If the target slot already has a player, swap them
       const existingPlayerId = next[targetPosId];
-      if (existingPlayerId && prevPosId) {
-        next[prevPosId] = existingPlayerId;
-      } else if (existingPlayerId && !prevPosId) {
-        // Player coming from bench to occupied slot — remove the occupant back to bench
-        delete next[targetPosId];
+      
+      // If we're dropping onto an occupied slot
+      if (existingPlayerId) {
+        // SWAP: If moving from another position on the field, swap players
+        if (prevPosId) {
+          next[prevPosId] = existingPlayerId;
+          toast.success('¡Intercambio de posiciones!');
+        } else {
+          // REPLACE: Moving from bench to an occupied slot
+          // The previous player simply returns to the bench
+          toast.info('Jugador reemplazado');
+        }
+      } else {
+        // Just moving to an empty slot
+        toast.success(prevPosId ? 'Posición ajustada' : 'Jugador asignado');
       }
 
       next[targetPosId] = playerId;
