@@ -1,13 +1,125 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
+    <!-- Codificación y Metaetiquetas Básicas -->
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Golica</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="shortcut icon" href="/logo.png" type="image/png" />
+    
+    <!-- Información Principal -->
+    <title>GOL-ICA - Sistema de Gestión de Atletismo de Alto Rendimiento</title>
+    <meta name="description" content="Plataforma integral para gestión de equipos atléticos de alto rendimiento. Coordina entrenamiento, fisioterapia, planificación táctica y desarrollo de jugadores con herramientas profesionales." />
+    <meta name="keywords" content="atletismo, gestión deportiva, entrenamiento, fisioterapia, táctico, jugadores, coaching, planificación" />
+    <meta name="author" content="GOL-ICA Team" />
+    <meta name="copyright" content="© 2026 GOL-ICA. Todos los derechos reservados." />
+    <meta name="theme-color" content="#1a1a2e" />
+    
+    <!-- SEO General -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="language" content="Spanish" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="bingbot" content="index, follow" />
+    
+    <!-- Open Graph para Redes Sociales -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="GOL-ICA - Sistema de Gestión de Atletismo de Alto Rendimiento" />
+    <meta property="og:description" content="Plataforma integral de gestión para equipos atléticos profesionales" />
+    <meta property="og:url" content="https://golica.com" />
+    <meta property="og:image" content="https://golica.com/logo.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:site_name" content="GOL-ICA" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GOL-ICA - Gestión de Atletismo de Alto Rendimiento" />
+    <meta name="twitter:description" content="Plataforma integral de gestión para equipos atléticos profesionales" />
+    <meta name="twitter:image" content="https://golica.com/logo.png" />
+    <meta name="twitter:creator" content="@golica" />
+    <meta name="twitter:site" content="@golica" />
+    
+    <!-- Seguridad y Performance -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GOL-ICA" />
+    
+    <!-- Preload y Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://ucbgwxtwnypzqrmshqrl.supabase.co" />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://golica.com" />
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "GOL-ICA",
+      "description": "Sistema de Gestión de Atletismo de Alto Rendimiento",
+      "url": "https://golica.com",
+      "image": "https://golica.com/logo.png",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
+    
+    <!-- Breadcrumb Schema -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Inicio",
+          "item": "https://golica.com"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Quiénes Somos",
+          "item": "https://golica.com/quienes-somos"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "Logros",
+          "item": "https://golica.com/logros"
+        }
+      ]
+    }
+    </script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Scripts de Tracking (comentados, descomentar según necesidad) -->
+    <!-- Google Analytics -->
+    <!-- <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script> -->
+    <!-- <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'GA_MEASUREMENT_ID');
+    </script> -->
   </body>
 </html>

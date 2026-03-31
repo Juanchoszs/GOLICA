@@ -7,7 +7,7 @@ export const downloadImage = (uri: string, name: string) => {
   document.body.removeChild(link);
 };
 
-export const exportBoardToJSON = (elements: any[], lines: any[]) => {
+export const exportBoardToJSON = (elements: Array<Record<string, unknown>>, lines: Array<Record<string, unknown>>) => {
   const data = JSON.stringify({ elements, lines }, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);

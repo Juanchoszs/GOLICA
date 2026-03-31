@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
+
+  <!-- Url set específico para optimización móvil -->
+  
+  <url>
+    <loc>https://golica.com/</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/inicio</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/quienes-somos</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/logros</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/contacto</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/jugadores</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/entrenador</loc>
+    <mobile:mobile/>
+  </url>
+
+  <url>
+    <loc>https://golica.com/fisioterapeuta</loc>
+    <mobile:mobile/>
+  </url>
+
+</urlset>

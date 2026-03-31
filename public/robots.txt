@@ -1,0 +1,88 @@
+# ROBOTs.txt para GOL-ICA - Sistema de Gestión de Atletismo de Alto Rendimiento
+# Optimizado para indexación de motores de búsqueda principales
+
+# Configuración general para todos los buscadores
+User-agent: *
+Allow: /
+Allow: /assets/
+Allow: /src/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /.env
+Disallow: /.*\.env*
+Disallow: /build/
+Disallow: /dist/
+Disallow: /node_modules/
+Disallow: /*.map
+Disallow: /.git
+Disallow: /public/
+Disallow: /supabase/
+Disallow: /src/
+
+# Permitir indexación de páginas públicas
+Allow: /$
+Allow: /inicio
+Allow: /quienes-somos
+Allow: /logros
+Allow: /contacto
+
+# Rastreo por Googlebot (optimizado)
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+Request-rate: 10/1s
+
+# Rastreo por Bingbot
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+Request-rate: 8/1s
+
+# Rastreo por Baiduspider (optimizado para mercados asiáticos)
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+Request-rate: 10/1s
+
+# Rastreo por Yandexbot
+User-agent: Yandexbot
+Allow: /
+Crawl-delay: 2
+
+# Optimizaciones específicas
+Sitemap: https://golica.com/sitemap.xml
+Sitemap: https://golica.com/sitemap-mobile.xml
+
+# Bloquear buscadores maliciosos y spam
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: MrBitterness
+Disallow: /
+
+User-agent: ConcourseBot
+Disallow: /
+
+# Permitir rastreadores principales sin restricciones
+User-agent: Slurp
+Allow: /
+
+User-agent: Slurp-msrbot
+Allow: /
+
+User-agent: Slurp-popartbot
+Allow: /
+
+# Configuración adicional
+#
+# Nota: Reemplazar "https://golica.com" por la URL real del sitio
+# Actualizar sitemaps según cambios en la estructura

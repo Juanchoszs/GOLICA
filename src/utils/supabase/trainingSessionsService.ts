@@ -66,7 +66,7 @@ export async function saveFullTrainingSession(
   }
 }
 
-export async function getTrainingSessions(coachId: string): Promise<any[]> {
+export async function getTrainingSessions(coachId: string): Promise<TrainingSession[]> {
   try {
     const { data, error } = await supabase
       .from('training_sessions')
@@ -88,7 +88,7 @@ export async function getTrainingSessions(coachId: string): Promise<any[]> {
 export async function getTrainingSessionsByCategory(
   category: string,
   coachId?: string
-): Promise<any[]> {
+): Promise<TrainingSession[]> {
   try {
     let query = supabase
       .from('training_sessions')
@@ -112,7 +112,7 @@ export async function getTrainingSessionsByCategory(
 /**
  * Get all training sessions (for admin users)
  */
-export async function getAllTrainingSessions(): Promise<any[]> {
+export async function getAllTrainingSessions(): Promise<TrainingSession[]> {
   try {
     const { data, error } = await supabase
       .from('training_sessions')
@@ -251,7 +251,7 @@ export async function uploadBoardImage(base64Data: string): Promise<string | nul
   }
 }
 
-export async function getTemplates(coachId: string): Promise<any[]> {
+export async function getTemplates(coachId: string): Promise<TrainingSession[]> {
   // TODO: Implement templates fetching if there is a table for it
   return [];
 }

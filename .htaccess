@@ -1,0 +1,147 @@
+# Configuración .htaccess para GOL-ICA
+# Compresión, caché y seguridad
+
+# ===== COMPRESIÓN GZIP =====
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/plain
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/xml
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE text/javascript
+  AddOutputFilterByType DEFLATE application/xml
+  AddOutputFilterByType DEFLATE application/xhtml+xml
+  AddOutputFilterByType DEFLATE application/rss+xml
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE application/x-javascript
+  AddOutputFilterByType DEFLATE application/x-httpd-php
+  AddOutputFilterByType DEFLATE image/svg+xml
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE font/opentype
+  AddOutputFilterByType DEFLATE font/truetype
+</IfModule>
+
+# ===== CACHE CONTROL =====
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # Archivos estáticos por defecto: 30 días
+  ExpiresDefault "access plus 30 days"
+  
+  # Cache para imágenes: 60 días
+  ExpiresByType image/jpeg "access plus 60 days"
+  ExpiresByType image/gif "access plus 60 days"
+  ExpiresByType image/png "access plus 60 days"
+  ExpiresByType image/webp "access plus 60 days"
+  ExpiresByType image/svg+xml "access plus 60 days"
+  ExpiresByType image/x-icon "access plus 60 days"
+  
+  # Cache para CSS y JavaScript: 1 año
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+  
+  # Cache para fuentes: 1 año
+  ExpiresByType font/truetype "access plus 1 year"
+  ExpiresByType font/opentype "access plus 1 year"
+  ExpiresByType application/x-font-woff "access plus 1 year"
+  ExpiresByType application/x-font-woff2 "access plus 1 year"
+  
+  # HTML: No cachear (siempre fresco)
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/xhtml+xml "access plus 0 seconds"
+</IfModule>
+
+# Cache-Control headers
+<IfModule mod_headers.c>
+  # HTML - Sin cache
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "max-age=0, public"
+  </FilesMatch>
+  
+  # CSS y JS - Cache largo
+  <FilesMatch "\.(css|js)$">
+    Header set Cache-Control "max-age=31536000, public"
+  </FilesMatch>
+  
+  # Imágenes - Cache muy largo
+  <FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico)$">
+    Header set Cache-Control "max-age=5184000, public"
+  </FilesMatch>
+  
+  # Fuentes - Cache muy largo
+  <FilesMatch "\.(woff|woff2|ttf|otf|eot)$">
+    Header set Cache-Control "max-age=31536000, public"
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+  
+  # JSON y XML - Cache moderado
+  <FilesMatch "\.(json|xml)$">
+    Header set Cache-Control "max-age=3600, public"
+  </FilesMatch>
+</IfModule>
+
+# ===== SEGURIDAD =====
+# Prevenir acceso a archivos sensibles
+<FilesMatch "^\.">
+  Order allow,deny
+  Deny from all
+</FilesMatch>
+
+# Prevenir ejecución de scripts en carpetas específicas
+<DirectoryMatch "^/uploads|^/files">
+  php_flag engine off
+  AddType text/plain .php .phtml .php3 .php4 .php5 .php6 .phps .pht .phar
+</DirectoryMatch>
+
+# ===== HEADERS DE SEGURIDAD =====
+<IfModule mod_headers.c>
+  # X-Frame-Options
+  Header set X-Frame-Options "SAMEORIGIN"
+  
+  # X-Content-Type-Options
+  Header set X-Content-Type-Options "nosniff"
+  
+  # Content Security Policy
+  Header set Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:;"
+  
+  # Referrer Policy
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  
+  # Feature Policy
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# ===== REESCRITURAS URL =====
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Redirigir HTTP a HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+  
+  # Redirigir www a no-www (opcional)
+  # RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+  # RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+  
+  # Si el archivo solicitud no existe
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # Redirigir a index.html para SPA (React)
+  RewriteRule ^(.*)$ /index.html [QSA,L]
+</IfModule>
+
+# ===== FORMATO DE COMPRESIÓN =====
+<IfModule mod_headers.c>
+  # Servir WebP con fallback
+  <FilesMatch "\.(?i:jpg|jpeg|png)$">
+    Header append Vary Accept
+  </FilesMatch>
+</IfModule>
+
+# ===== ACCESO DIRECTO A ARCHIVOS =====
+# Permitir acceso a sitemaps y robots.txt
+<FilesMatch "(robots\.txt|sitemap\.xml)$">
+  Allow from all
+</FilesMatch>

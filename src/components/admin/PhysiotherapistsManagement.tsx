@@ -63,7 +63,7 @@ export function PhysiotherapistsManagement() {
             // Fetch all profiles that have role 'physiotherapist'
             // This ensures we see them even if the 'physiotherapists' table record is missing
             const { data, error } = await supabase.from('profiles')
-                .select('*, physiotherapists(*)')
+                .select('*, physiotherapists!physiotherapists_id_fkey(*)')
                 .eq('role', 'physiotherapist')
                 .order('name');
 
@@ -203,13 +203,13 @@ export function PhysiotherapistsManagement() {
 
             if (error) {
                 console.error('❌ Error invoking function:', error);
-                if (error.message?.includes('Failed to send a request') || error.status === 404) {
-                    toast.error('Error: La Función Edge no está desplegada. Ejecuta "supabase functions deploy admin-create-user" para activarla.', {
-                        duration: 6000
-                    });
-                } else {
-                    toast.error('Error al registrar fisioterapeuta: ' + error.message);
-                }
+                toast.error('Error de red/servidor: ' + error.message);
+                return;
+            }
+
+            if (data && data.success === false) {
+                console.error('❌ Error en el servidor:', data.error);
+                toast.error('Error al registrar: ' + data.error);
                 return;
             }
 

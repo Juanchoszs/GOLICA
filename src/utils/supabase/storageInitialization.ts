@@ -146,7 +146,7 @@ export async function getBucketInfo(bucketName: string): Promise<{
 export async function listBucketFiles(
   bucketName: string,
   limit: number = 100
-): Promise<any[]> {
+): Promise<Array<{ name: string; id: string }>> {
   try {
     const { data, error } = await supabase.storage
       .from(bucketName)

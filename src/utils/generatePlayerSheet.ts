@@ -1,12 +1,12 @@
 
-export const generatePlayerSheet = async (player: any) => {
+export const generatePlayerSheet = async (player: Record<string, unknown>) => {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     alert('Por favor, permite las ventanas emergentes para descargar la ficha');
     return;
   }
 
-  const parseField = (field: any, defaultValue: any = []) => {
+  const parseField = (field: unknown, defaultValue: unknown[] = []) => {
     if (!field) return defaultValue;
     if (typeof field === 'string') {
       try {
@@ -625,9 +625,9 @@ export const generatePlayerSheet = async (player: any) => {
                 ${parsedInjuries.length > 0 ? `
                   <div class="badge-list">
                     ${parsedInjuries
-        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(String(b.date)).getTime() - new Date(String(a.date)).getTime())
         .slice(0, 2)
-        .map((injury: any) => `
+        .map((injury: Record<string, unknown>) => `
                         <div class="badge-item" style="border-left-color: #ef4444;">
                           <div class="badge-item-content">
                             <div class="badge-item-title" style="color: #b91c1c;">${injury.type}</div>
